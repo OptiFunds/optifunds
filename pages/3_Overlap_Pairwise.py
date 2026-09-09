@@ -1,75 +1,79 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import duckdb
+from pathlib import Path
 from modules.data_loader import load_all_data
 
-st.set_page_config(page_title="Solapament Pairwise - OptiFunds", layout="wide")
-df_master, df_holdings, _, _, fund_options = load_all_data()
+st.set_page_config(page_title="Solapament Pairwise | OptiFunds", layout="wide")
 
-st.title("Solapament Pairwise")
-st.caption("Intersecció exacta de títols compartits entre dos fons d'inversió")
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+HOLDINGS_PATH = DATA_DIR / "optifunds_holdings_spain.parquet"
+MASTER_PATH = DATA_DIR / "optifunds_master_spain.parquet"
+
+df_master, _, _, _, fund_options = load_all_data()
+
+st.title("Solapament Pairwise (1 vs 1)")
+st.caption("Inspecciona la intersecció de carteres entre dos fons qualsevol.")
 
 col1, col2 = st.columns(2)
 with col1:
-    f1_name = st.selectbox(
-        "Primer Fons:", 
-        fund_options, 
-        index=0
-    )
+    f1 = st.selectbox("Primer fons:", fund_options, index=0)
 with col2:
-    f2_default_idx = 1 if len(fund_options) > 1 else 0
-    f2_name = st.selectbox(
-        "Segon Fons:", 
-        fund_options, 
-        index=f2_default_idx
-    )
+    idx_f2 = 1 if len(fund_options) > 1 else 0
+    f2 = st.selectbox("Segon fons:", fund_options, index=idx_f2)
 
-isin_1 = df_master.loc[df_master["Fund Name"] == f1_name, "Instrument"].values[0]
-isin_2 = df_master.loc[df_master["Fund Name"] == f2_name, "Instrument"].values[0]
+def get_positions(con, fund_name):
+    esc = fund_name.replace("'", "''")
+    query = f"""
+        WITH target AS (
+            SELECT ISIN, RIC, Instrument FROM read_parquet('{MASTER_PATH}') WHERE \"Fund Name\" = '{esc}' LIMIT 1
+        )
+        SELECT h."Holding RIC", h."Holding Name", h."Clean_Weight"
+        FROM read_parquet('{HOLDINGS_PATH}') h
+        JOIN target t ON h."Instrument" = t.ISIN OR h."Instrument" = t.RIC OR h."Instrument" = t.Instrument
+    """
+    return con.execute(query).df()
 
-port1 = df_holdings[df_holdings["Instrument"] == isin_1][["Holding RIC", "Holding Name", "Clean_Weight"]]
-port2 = df_holdings[df_holdings["Instrument"] == isin_2][["Holding RIC", "Clean_Weight"]]
+con = duckdb.connect(database=":memory:")
+p1 = get_positions(con, f1)
+p2 = get_positions(con, f2)
+con.close()
 
-merged = pd.merge(port1, port2, on="Holding RIC", suffixes=(f"_f1", f"_f2"))
-
-if not merged.empty:
+if not p1.empty and not p2.empty:
+    merged = pd.merge(p1, p2, on="Holding RIC", suffixes=("_f1", "_f2"))
     merged["Overlap_%"] = merged[["Clean_Weight_f1", "Clean_Weight_f2"]].min(axis=1)
     merged = merged.sort_values(by="Overlap_%", ascending=False).reset_index(drop=True)
-    total_overlap = float(merged["Overlap_%"].sum())
+
+    total_overlap = merged["Overlap_%"].sum()
+    st.metric("Solapament Total Conjunt", f"{total_overlap:.2f} %")
+
+    if not merged.empty and total_overlap > 0:
+        c_left, c_right = st.columns([1.2, 1])
+        with c_left:
+            fig_ov = px.bar(
+                merged.head(10),
+                x="Overlap_%",
+                y="Holding Name_f1",
+                orientation="h",
+                title="Top Accions Solapades",
+                labels={"Overlap_%": "Solapament (%)", "Holding Name_f1": "Actiu"},
+                color="Overlap_%",
+                color_continuous_scale="Blues"
+            )
+            fig_ov.update_layout(yaxis=dict(autorange="reversed"))
+            st.plotly_chart(fig_ov, use_container_width=True)
+
+        with c_right:
+            display_df = merged[["Holding Name_f1", "Holding RIC", "Clean_Weight_f1", "Clean_Weight_f2", "Overlap_%"]].rename(columns={
+                "Holding Name_f1": "Actiu",
+                "Holding RIC": "RIC",
+                "Clean_Weight_f1": f"Pes a {f1[:15]} (%)",
+                "Clean_Weight_f2": f"Pes a {f2[:15]} (%)",
+                "Overlap_%": "Mínim Compartit (%)"
+            })
+            st.dataframe(display_df, hide_index=True, use_container_width=True)
+    else:
+        st.info("No s'han trobat posicions coincidents entre aquests dos fons.")
 else:
-    total_overlap = 0.0
-
-st.write("---")
-m1, m2, m3 = st.columns(3)
-m1.metric("Solapament Total", f"{total_overlap:.2f} %")
-m2.metric("Títols Coincidents", len(merged))
-diff_weight = max(0.0, 100.0 - total_overlap)
-m3.metric("Diversificació Real", f"{diff_weight:.2f} %")
-
-if not merged.empty:
-    fig = px.bar(
-        merged.head(10),
-        x="Overlap_%",
-        y="Holding Name",
-        orientation="h",
-        title="Top 10 Accions Amb Major Solapament",
-        labels={"Overlap_%": "Solapament Conjunt (%)", "Holding Name": "Companyia"},
-        color="Overlap_%",
-        color_continuous_scale="Viridis"
-    )
-    fig.update_layout(yaxis=dict(autorange="reversed"))
-    st.plotly_chart(fig, width='stretch')
-
-    st.subheader("Desglossament Complet d'Accions Compartides")
-    st.dataframe(
-        merged.rename(columns={
-            "Holding Name": "Companyia Subjacent",
-            "Holding RIC": "Identificador RIC",
-            "Clean_Weight_f1": f"Pes a {f1_name[:20]} (%)",
-            "Clean_Weight_f2": f"Pes a {f2_name[:20]} (%)",
-            "Overlap_%": "Solapament Mínim (%)"
-        }),
-        width='stretch'
-    )
-else:
-    st.info("No s'han trobat títols coincidents entre les carteres seleccionades.")
+    st.warning("Un dels dos fons seleccionats no té desglossament de holdings disponible.")

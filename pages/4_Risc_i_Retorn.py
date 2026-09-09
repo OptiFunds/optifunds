@@ -3,67 +3,53 @@ import pandas as pd
 import plotly.express as px
 from modules.data_loader import load_all_data
 
-st.set_page_config(page_title="Risc i Rendibilitat - OptiFunds", layout="wide")
-df_master, _, df_metrics, _, fund_options = load_all_data()
+st.set_page_config(page_title="Risc i Retorn | OptiFunds", layout="wide")
 
-st.title("Risc i Rendibilitat Històrica")
-st.caption("Avaluació del binomi rendibilitat-risc, Sharpe Ratio i màxim drawdown")
+df_master, _, _, _, fund_options = load_all_data()
 
-if df_metrics.empty:
-    st.warning("No s'han trobat mètriques històriques calculades a optifunds_risk_metrics.csv.")
-    st.stop()
+st.title("Risc i Rendibilitat Institucional")
+st.caption("Frontera empírica i ràtios de Sharpe oficials Lipper.")
 
-# Selector interactiu per destacar un fons concret
-selected_fund = st.selectbox("Destacar fons al mapa analític:", fund_options, index=0)
+# Neteja de dades per al gràfic
+df_valid = df_master.dropna(subset=["Volatility_3Y", "Return_3Y"]).copy()
+df_valid = df_valid[df_valid["Volatility_3Y"] > 0]
 
-# Gràfic de dispersió: Risc vs Retorn (sense size negatiu)
+categories = ["Totes"] + sorted(df_valid["Asset_Class"].dropna().unique().tolist())
+cat_selected = st.selectbox("Filtrar per categoria Lipper:", categories)
+
+if cat_selected != "Totes":
+    df_valid = df_valid[df_valid["Asset_Class"] == cat_selected]
+
+c1, c2, c3 = st.columns(3)
+c1.metric("Fons Analitzats", len(df_valid))
+c2.metric("Sharpe Mitjà (3Y)", f"{df_valid['Sharpe_3Y'].mean():.2f}" if "Sharpe_3Y" in df_valid else "N/D")
+c3.metric("Volatilitat Mitjana (3Y)", f"{df_valid['Volatility_3Y'].mean():.2f} %")
+
+st.markdown("---")
+
 fig_scatter = px.scatter(
-    df_metrics,
-    x="Volatilitat (%)",
-    y="CAGR Anualitzat (%)",
-    color="Sharpe Ratio",
-    hover_name="Fons",
-    hover_data={
-        "Volatilitat (%)": ":.2f",
-        "CAGR Anualitzat (%)": ":.2f",
-        "Sharpe Ratio": ":.2f",
-        "Retorn Total (%)": ":.2f",
-        "Max Drawdown (%)": ":.2f"
-    },
-    title="Mapa de Risc i Retorn (Color: Sharpe Ratio)",
+    df_valid.head(500), # Mostrem els 500 primers per fluïdesa
+    x="Volatility_3Y",
+    y="Return_3Y",
+    hover_name="Fund Name",
+    color="Sharpe_3Y",
     color_continuous_scale="Viridis",
-    labels={
-        "Volatilitat (%)": "Volatilitat Anualitzada (%)",
-        "CAGR Anualitzat (%)": "Rendibilitat Anualitzada CAGR (%)"
-    }
+    title="Frontera Empírica: Volatilitat vs Retorn (3 Anys)",
+    labels={"Volatility_3Y": "Volatilitat Anualitzada (%)", "Return_3Y": "Retorn Anualitzat (%)"}
 )
-fig_scatter.update_traces(marker=dict(size=10))
+st.plotly_chart(fig_scatter, use_container_width=True)
 
-# Ressaltar el fons seleccionat
-highlight_df = df_metrics[df_metrics["Fons"] == selected_fund]
-if not highlight_df.empty:
-    fig_scatter.add_scatter(
-        x=highlight_df["Volatilitat (%)"],
-        y=highlight_df["CAGR Anualitzat (%)"],
-        mode="markers+text",
-        marker=dict(color="red", size=16, symbol="star"),
-        text=[selected_fund],
-        textposition="top center",
-        name="Seleccionat"
-    )
-
-st.plotly_chart(fig_scatter, width='stretch')
-
-# Targetes de detall del fons triat
-if not highlight_df.empty:
-    row = highlight_df.iloc[0]
-    st.subheader(f"Fitxa de Rendiment: {selected_fund}")
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("CAGR Anualitzat", f"{row['CAGR Anualitzat (%)']:.2f} %")
-    c2.metric("Volatilitat Anualitzada", f"{row['Volatilitat (%)']:.2f} %")
-    c3.metric("Ràtio de Sharpe", f"{row['Sharpe Ratio']:.2f}")
-    c4.metric("Màxim Drawdown", f"{row['Max Drawdown (%)']:.2f} %")
-
-st.write("---")
-st.subheader("Taula Completa de Mètriques de l'Univers")
-st.dataframe(df_metrics.sort_values(by="Sharpe Ratio", ascending=False).reset_index(drop=True), width='stretch')
+st.subheader("Top 20 Fons per Ràtio de Sharpe (3 Anys)")
+top_sharpe = df_valid.sort_values(by="Sharpe_3Y", ascending=False).head(20)
+st.dataframe(
+    top_sharpe[["Fund Name", "Asset_Class", "Sharpe_3Y", "Return_3Y", "Volatility_3Y", "TER_Estimat"]].rename(columns={
+        "Fund Name": "Fons",
+        "Asset_Class": "Categoria",
+        "Sharpe_3Y": "Sharpe (3Y)",
+        "Return_3Y": "Retorn 3Y (%)",
+        "Volatility_3Y": "Volatilitat 3Y (%)",
+        "TER_Estimat": "TER (%)"
+    }),
+    hide_index=True,
+    use_container_width=True
+)
