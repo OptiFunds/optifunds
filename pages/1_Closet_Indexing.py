@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from modules.data_loader import load_all_data
-from modules.closet_indexing import audit_closet_indexing, BENCHMARK_PROXIES
+from modules.closet_indexing import audit_closet_indexing
 
 st.set_page_config(page_title="Detector Closet Indexing | OptiFunds", layout="wide")
 
@@ -11,7 +11,11 @@ df_master, df_holdings, _, _, fund_options = load_all_data()
 st.title("Detector de Closet Indexing & Active Share")
 st.caption("Auditoria de carteres sobre l'univers de fons comercialitzats a Espanya.")
 
-# Selectors
+# Indexats representatius existents a la BD com a benchmarks
+indexed_benchmarks = [f for f in fund_options if any(k in f.lower() for k in ["vanguard", "ishares core", "msci world", "s&p 500", "index"])]
+if not indexed_benchmarks:
+    indexed_benchmarks = fund_options
+
 col1, col2 = st.columns(2)
 
 with col1:
@@ -20,17 +24,14 @@ with col1:
     selected_fund_name = st.selectbox("Fons a auditar:", fund_options, index=idx_fnd)
 
 with col2:
-    bmk_options = [b["name"] for b in BENCHMARK_PROXIES.values()] + fund_options[:100]
-    bmk_options = sorted(list(set(bmk_options)))
-    default_bmk = BENCHMARK_PROXIES["GLOBAL"]["name"]
-    idx_bmk = bmk_options.index(default_bmk) if default_bmk in bmk_options else 0
-    selected_bmk_name = st.selectbox("Benchmark de referència:", bmk_options, index=idx_bmk)
+    default_bmk = "Vanguard Global Stock Index EUR Acc"
+    idx_bmk = indexed_benchmarks.index(default_bmk) if default_bmk in indexed_benchmarks else 0
+    selected_bmk_name = st.selectbox("Benchmark de referència:", indexed_benchmarks, index=idx_bmk)
 
-# Cridem directament amb els noms seleccionats
 result = audit_closet_indexing(selected_fund_name, selected_bmk_name)
 
 if result is None or "error" in result:
-    st.warning("No s'han trobat suficients posicions de cartera per auditar aquest vehicle.")
+    st.warning(f"No s'han trobat suficients posicions de cartera: {result.get('error', '')}")
 else:
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Solapament de Cartera", f"{result['overlap']:.1f} %")
