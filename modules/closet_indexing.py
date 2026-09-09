@@ -1,120 +1,119 @@
-import os
-import pandas as pd
+import duckdb
 import numpy as np
+import pandas as pd
+from pathlib import Path
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+HOLDINGS_PATH = DATA_DIR / "optifunds_holdings_spain.parquet"
+MASTER_PATH = DATA_DIR / "optifunds_master_spain.parquet"
 
-df_master = pd.read_csv(os.path.join(BASE_DIR, "optifunds_master.csv"))
-df_holdings = pd.read_csv(os.path.join(BASE_DIR, "optifunds_holdings.csv"))
-
-# Taula de despeses corrents reals conegudes (TER)
-TER_LOOKUP = {
-    "IE00B03HD191": 0.18,  # Vanguard Global Stock
-    "LU0996182563": 0.30,  # Amundi MSCI World
-    "LU0690375182": 1.05,  # Fundsmith Equity
-    "IE0031786142": 0.23,  # Vanguard Emerging Markets
-    "IE0031786696": 0.23,  # Vanguard Emerging Markets Acc
-    "LU0389811885": 0.12,  # Amundi Core MSCI Europe
-    "LU0389812693": 0.10,  # Amundi Gov Bond
-    "LU0389812933": 0.10,  # Amundi Gov Bond Acc
-    "IE00B4L5Y983": 0.20,  # iShares Core MSCI World
-    "IE00B5BMR087": 0.07,  # iShares Core S&P 500
-    "ES0152745003": 1.85,  # Magallanes European
-    "ES0174115012": 1.75,  # Cobas Selección
-    "ES0112611001": 1.80,  # Azvalor Internacional
+# Mapa de benchmarks de baix cost per categoria / paraula clau
+BENCHMARK_PROXIES = {
+    "GLOBAL": {"isin": "IE00B03HD191", "name": "Vanguard Global Stock Index EUR Acc", "ter": 0.18},
+    "US": {"isin": "IE00B5BMR087", "name": "iShares Core S&P 500 UCITS ETF USD (Acc)", "ter": 0.07},
+    "EUROPE": {"isin": "LU0389811885", "name": "Amundi Core MSCI Europe AE Acc", "ter": 0.12},
+    "EMERGING": {"isin": "IE0031786696", "name": "Vanguard Emerging Markets Stock Index EUR Acc", "ter": 0.23},
+    "TECH": {"isin": "LU0171310443", "name": "BGF World Technology Fund A2 EUR", "ter": 0.20}
 }
 
-def resolve_ter(isin: str, name: str) -> float:
-    if isin in TER_LOOKUP:
-        return TER_LOOKUP[isin]
-    n = str(name).lower()
-    if "index" in n or "etf" in n or "core" in n or "vanguard" in n:
-        return 0.20
-    return 1.75  # Fons actiu estàndard comercialitzat a banca
+def get_fund_positions(isin: str) -> pd.DataFrame:
+    con = duckdb.connect(database=":memory:")
+    query = f"""
+        SELECT "Holding RIC", "Holding Name", "Clean_Weight"
+        FROM read_parquet('{HOLDINGS_PATH}')
+        WHERE "Instrument" = '{isin}'
+    """
+    df = con.execute(query).df()
+    con.close()
+    return df
 
-df_master["TER_Estimat"] = [
-    resolve_ter(row["Instrument"], row["Fund Name"]) 
-    for _, row in df_master.iterrows()
-]
-
-def run_closet_indexing_audit(benchmark_isin: str = "IE00B03HD191"):
-    bmk_row = df_master.loc[df_master["Instrument"] == benchmark_isin]
-    if bmk_row.empty:
-        return
-    bmk_name = bmk_row["Fund Name"].values[0]
-    bmk_ter = float(bmk_row["TER_Estimat"].values[0])
+def audit_closet_indexing(active_isin: str, benchmark_isin: str = None, benchmark_ter: float = None):
+    con = duckdb.connect(database=":memory:")
+    f_act = con.execute(f"SELECT * FROM read_parquet('{MASTER_PATH}') WHERE \"Instrument\" = '{active_isin}'").df()
     
-    p_bmk = df_holdings[df_holdings["Instrument"] == benchmark_isin][["Holding RIC", "Clean_Weight"]]
-    
-    print("=" * 95)
-    print(f"OPTIFUNDS - AUDITORIA D'ACTIVE SHARE I CLOSET INDEXING")
-    print(f"Benchmark de Referència: {bmk_name} (TER: {bmk_ter:.2f}%)")
-    print("=" * 95)
-    
-    records = []
-    
-    for _, row in df_master.iterrows():
-        isin = row["Instrument"]
-        name = row["Fund Name"]
-        ter = row["TER_Estimat"]
+    if f_act.empty:
+        con.close()
+        return None
         
-        if isin == benchmark_isin:
-            continue
+    act_row = f_act.iloc[0]
+    fund_name = act_row.get("Fund Name", "Fons Desconegut")
+    ter_raw = act_row.get("TER_Estimat", 1.65)
+    ter_fund = float(ter_raw) if pd.notna(ter_raw) else 1.65
+
+    # Si no es passa benchmark explícit, seleccionar per defecte Vanguard Global
+    if not benchmark_isin:
+        benchmark_isin = BENCHMARK_PROXIES["GLOBAL"]["isin"]
+        benchmark_ter = BENCHMARK_PROXIES["GLOBAL"]["ter"]
+        bmk_name = BENCHMARK_PROXIES["GLOBAL"]["name"]
+    else:
+        f_bmk = con.execute(f"SELECT * FROM read_parquet('{MASTER_PATH}') WHERE \"Instrument\" = '{benchmark_isin}'").df()
+        bmk_name = f_bmk.iloc[0].get("Fund Name", "Benchmark") if not f_bmk.empty else "Benchmark"
+        if benchmark_ter is None:
+            benchmark_ter = 0.18
             
-        p_act = df_holdings[df_holdings["Instrument"] == isin][["Holding RIC", "Clean_Weight"]]
-        if p_act.empty:
-            continue
-            
-        merged = pd.merge(p_act, p_bmk, on="Holding RIC", how="outer", suffixes=("_act", "_bmk")).fillna(0.0)
-        
-        # Càlcul normalitzat d'Active Share
-        sum_act = merged["Clean_Weight_act"].sum()
-        sum_bmk = merged["Clean_Weight_bmk"].sum()
-        
-        if sum_act > 0 and sum_bmk > 0:
-            w_act = merged["Clean_Weight_act"] / sum_act
-            w_bmk = merged["Clean_Weight_bmk"] / sum_bmk
-            active_share = 0.5 * np.sum(np.abs(w_act - w_bmk)) * 100
-            overlap = np.sum(np.minimum(w_act, w_bmk)) * 100
-        else:
-            active_share = 100.0
-            overlap = 0.0
-            
-        is_indexed = ("index" in name.lower() or "etf" in name.lower() or "vanguard" in name.lower() or "core" in name.lower())
-        
-        # Diagnòstic segons estil i cost
-        if is_indexed:
-            verdict = "Indexat legítim de baix cost"
-            alert = "INDEXAT"
-            active_fee = ter
-        elif active_share < 35:
-            verdict = "Closet Indexing Flagrant (Còpia cara)"
-            alert = "CRÍTIC"
-            as_ratio = max(active_share / 100.0, 0.05)
-            active_fee = (ter - (1 - as_ratio) * bmk_ter) / as_ratio
-        elif active_share < 60:
-            verdict = "Gestió activa feble (Risc d'indexació)"
-            alert = "ALTA"
-            as_ratio = active_share / 100.0
-            active_fee = (ter - (1 - as_ratio) * bmk_ter) / as_ratio
-        else:
-            verdict = "Gestió d'autor d'alta convicció"
-            alert = "BONA"
-            as_ratio = active_share / 100.0
-            active_fee = (ter - (1 - as_ratio) * bmk_ter) / as_ratio
+    con.close()
 
-        records.append({
-            "Fons": name[:42],
-            "TER": f"{ter:.2f}%",
-            "Solapament": f"{overlap:.1f}%",
-            "Active Share": f"{active_share:.1f}%",
-            "Alerta": alert,
-            "Diagnòstic": verdict,
-            "TER Actiu": f"{active_fee:.2f}%"
-        })
+    p_act = get_fund_positions(active_isin)
+    p_bmk = get_fund_positions(benchmark_isin)
 
-    df_out = pd.DataFrame(records)
-    print(df_out.to_string(index=False))
+    if p_act.empty or p_bmk.empty:
+        return {
+            "fund_name": fund_name,
+            "benchmark_name": bmk_name,
+            "error": "Sense posicions detallades a la base de dades"
+        }
 
-if __name__ == "__main__":
-    run_closet_indexing_audit("IE00B03HD191")
+    merged = pd.merge(p_act, p_bmk, on="Holding RIC", how="outer", suffixes=("_fnd", "_bmk")).fillna(0.0)
+
+    sum_fnd = merged["Clean_Weight_fnd"].sum()
+    sum_bmk = merged["Clean_Weight_bmk"].sum()
+
+    if sum_fnd > 0 and sum_bmk > 0:
+        w_fnd = merged["Clean_Weight_fnd"] / sum_fnd
+        w_bmk = merged["Clean_Weight_bmk"] / sum_bmk
+        active_share = float(0.5 * np.sum(np.abs(w_fnd - w_bmk)) * 100)
+        overlap = float(np.sum(np.minimum(w_fnd, w_bmk)) * 100)
+    else:
+        active_share, overlap = 100.0, 0.0
+
+    # Càlcul TER efectiu sobre la part activa
+    as_ratio = max(active_share / 100.0, 0.05)
+    ter_actiu = (ter_fund - (1 - as_ratio) * benchmark_ter) / as_ratio
+
+    # Diagnòstic professional
+    is_indexed = any(k in fund_name.lower() for k in ["index", "etf", "vanguard", "core", "swap", "screened"])
+    
+    if is_indexed:
+        category = "Indexat Legítim"
+        alert_code = "INDEXED"
+    elif active_share < 35.0:
+        category = "Closet Indexing Flagrant"
+        alert_code = "CRITICAL"
+    elif active_share < 60.0:
+        category = "Gestió Activa Feble"
+        alert_code = "WARNING"
+    else:
+        category = "Gestió Activa de Convicció"
+        alert_code = "HEALTHY"
+
+    # Top títols solapats
+    merged["Shared_Weight"] = np.minimum(merged["Clean_Weight_fnd"], merged["Clean_Weight_bmk"])
+    merged["Resolved_Name"] = merged["Holding Name_fnd"].replace(0.0, np.nan).fillna(merged["Holding Name_bmk"])
+    top_overlap_holdings = (
+        merged[merged["Shared_Weight"] > 0][["Resolved_Name", "Shared_Weight", "Clean_Weight_fnd", "Clean_Weight_bmk"]]
+        .sort_values(by="Shared_Weight", ascending=False)
+        .head(10)
+    )
+
+    return {
+        "fund_name": fund_name,
+        "benchmark_name": bmk_name,
+        "ter_fund": ter_fund,
+        "ter_benchmark": benchmark_ter,
+        "overlap": overlap,
+        "active_share": active_share,
+        "ter_active_effective": ter_actiu,
+        "category": category,
+        "alert_code": alert_code,
+        "top_overlaps": top_overlap_holdings
+    }

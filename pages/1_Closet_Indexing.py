@@ -1,99 +1,102 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 from modules.data_loader import load_all_data
-from modules.pdf_generator import build_closet_indexing_pdf
+from modules.closet_indexing import audit_closet_indexing, BENCHMARK_PROXIES
 
-st.set_page_config(page_title="Closet Indexing - OptiFunds", layout="wide")
+st.set_page_config(page_title="Detector Closet Indexing | OptiFunds", layout="wide")
+
 df_master, df_holdings, _, _, fund_options = load_all_data()
 
-st.title("Detector de Closet Indexing")
-st.caption("Auditoria de gestió activa versus índex de referència")
+st.title("Detector de Closet Indexing & Active Share")
+st.caption("Auditoria de carteres sobre l'univers de fons comercialitzats a Espanya.")
 
+# Selectors
 col1, col2 = st.columns(2)
+
 with col1:
-    default_bmk = "Vanguard Global Stock Index EUR Acc"
-    bmk_name = st.selectbox(
-        "Benchmark de referència:", 
-        fund_options, 
-        index=fund_options.index(default_bmk) if default_bmk in fund_options else 0
-    )
-with col2:
     default_fnd = "Fundsmith SICAV-Fundsmith Equity EUR T Acc"
-    fund_name = st.selectbox(
-        "Fons a auditar:", 
-        fund_options, 
-        index=fund_options.index(default_fnd) if default_fnd in fund_options else (1 if len(fund_options) > 1 else 0)
-    )
+    idx_fnd = fund_options.index(default_fnd) if default_fnd in fund_options else 0
+    selected_fund_name = st.selectbox("Fons a auditar:", fund_options, index=idx_fnd)
 
-isin_bmk = df_master.loc[df_master["Fund Name"] == bmk_name, "Instrument"].values[0]
-isin_fnd = df_master.loc[df_master["Fund Name"] == fund_name, "Instrument"].values[0]
+with col2:
+    # Llista de benchmarks disponibles al mercat
+    bmk_options = [b["name"] for b in BENCHMARK_PROXIES.values()] + fund_options[:50]
+    bmk_options = sorted(list(set(bmk_options)))
+    default_bmk = BENCHMARK_PROXIES["GLOBAL"]["name"]
+    idx_bmk = bmk_options.index(default_bmk) if default_bmk in bmk_options else 0
+    selected_bmk_name = st.selectbox("Benchmark de referència:", bmk_options, index=idx_bmk)
 
-ter_bmk = float(df_master.loc[df_master["Instrument"] == isin_bmk, "TER_Estimat"].values[0])
-ter_fnd = float(df_master.loc[df_master["Instrument"] == isin_fnd, "TER_Estimat"].values[0])
+# Recuperar ISINs
+isin_fund = df_master.loc[df_master["Fund Name"] == selected_fund_name, "Instrument"].values[0]
+isin_bmk_series = df_master.loc[df_master["Fund Name"] == selected_bmk_name, "Instrument"]
+isin_bmk = isin_bmk_series.values[0] if not isin_bmk_series.empty else BENCHMARK_PROXIES["GLOBAL"]["isin"]
 
-p_bmk = df_holdings[df_holdings["Instrument"] == isin_bmk][["Holding RIC", "Clean_Weight"]]
-p_fnd = df_holdings[df_holdings["Instrument"] == isin_fnd][["Holding RIC", "Clean_Weight"]]
+result = audit_closet_indexing(isin_fund, isin_bmk)
 
-merged = pd.merge(p_fnd, p_bmk, on="Holding RIC", how="outer", suffixes=("_fnd", "_bmk")).fillna(0.0)
-
-sum_fnd = merged["Clean_Weight_fnd"].sum()
-sum_bmk = merged["Clean_Weight_bmk"].sum()
-
-if sum_fnd > 0 and sum_bmk > 0:
-    w_fnd = merged["Clean_Weight_fnd"] / sum_fnd
-    w_bmk = merged["Clean_Weight_bmk"] / sum_bmk
-    active_share = float(0.5 * np.sum(np.abs(w_fnd - w_bmk)) * 100)
-    overlap = float(np.sum(np.minimum(w_fnd, w_bmk)) * 100)
+if result is None or "error" in result:
+    st.warning("No s'han trobat suficients posicions de cartera per auditar aquest vehicle.")
 else:
-    active_share, overlap = 100.0, 0.0
+    # Panell de mètriques
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Solapament de Cartera", f"{result['overlap']:.1f} %")
+    m2.metric("Active Share", f"{result['active_share']:.1f} %")
+    m3.metric("Comissió Oficial (TER)", f"{result['ter_fund']:.2f} %")
+    m4.metric("TER Efectiu Part Activa", f"{result['ter_active_effective']:.2f} %")
 
-as_ratio = max(active_share / 100.0, 0.05)
-ter_actiu = (ter_fnd - (1 - as_ratio) * ter_bmk) / as_ratio
+    st.markdown("---")
 
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("Solapament amb Índex", f"{overlap:.1f} %")
-m2.metric("Active Share", f"{active_share:.1f} %")
-m3.metric("TER Oficial", f"{ter_fnd:.2f} %")
-m4.metric("TER Efectiu Actiu", f"{ter_actiu:.2f} %")
+    # Banner d'avaluació institucional
+    if result["alert_code"] == "CRITICAL":
+        st.error(
+            f"**Diagnòstic: {result['category']}**. "
+            f"El fons replica un {result['overlap']:.1f}% de la referència. "
+            f"Estàs pagant un **{result['ter_active_effective']:.2f}% anual** pel capital realment diferenciat."
+        )
+    elif result["alert_code"] == "WARNING":
+        st.warning(
+            f"**Diagnòstic: {result['category']}**. "
+            f"Active Share del {result['active_share']:.1f}%. El gestor pren un risc limitat respecte a l'índex."
+        )
+    elif result["alert_code"] == "INDEXED":
+        st.info(
+            f"**Diagnòstic: {result['category']}**. "
+            "Vehicle indexat d'estructura sistemàtica i baix cost operatiu."
+        )
+    else:
+        st.success(
+            f"**Diagnòstic: {result['category']}**. "
+            f"Active Share elevat ({result['active_share']:.1f}%). Convicció autèntica de cartera."
+        )
 
-is_closet = active_share < 50 and not any(k in fund_name.lower() for k in ["index", "etf", "vanguard", "core"])
+    # Gràfics: Distribució i solapament de títols
+    c_left, c_right = st.columns([1, 1])
 
-if is_closet:
-    st.error(f"Alerta de Closet Indexing: Solapament del {overlap:.1f}%. Es paga un {ter_actiu:.2f}% pel capital realment gestionat.")
-else:
-    st.success(f"Gestió diferencial confirmada (Active Share: {active_share:.1f}%).")
+    with c_left:
+        st.subheader("Estructura de la Cartera")
+        df_pie = pd.DataFrame({
+            "Component": ["Rèplica de l'Índex", "Gestió Diferenciada Activa"],
+            "Percentatge": [result["overlap"], result["active_share"]]
+        })
+        fig_pie = px.pie(
+            df_pie,
+            values="Percentatge",
+            names="Component",
+            color_discrete_sequence=["#94A3B8", "#0D9488"],
+            hole=0.4
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
 
-# Generador del fitxer PDF
-pdf_bytes = build_closet_indexing_pdf(
-    fund_name=fund_name,
-    bmk_name=bmk_name,
-    isin_fund=isin_fnd,
-    isin_bmk=isin_bmk,
-    overlap=overlap,
-    active_share=active_share,
-    ter_fund=ter_fnd,
-    ter_actiu=ter_actiu,
-    is_closet=is_closet
-)
-
-st.download_button(
-    label="Descarregar Informe Executiu (PDF)",
-    data=pdf_bytes,
-    file_name=f"Auditoria_{isin_fnd}.pdf",
-    mime="application/pdf"
-)
-
-df_drag = pd.DataFrame({
-    "Component": ["Part Replicada de l'Índex", "Part Activa Diferenciada"],
-    "Pes (%)": [overlap, active_share]
-})
-fig_drag = px.pie(
-    df_drag,
-    values="Pes (%)",
-    names="Component",
-    title="Desglossament de la Cartera: Índex vs Gestió Pròpia",
-    color_discrete_sequence=["#94A3B8", "#0D9488"]
-)
-st.plotly_chart(fig_drag, width='stretch')
+    with c_right:
+        st.subheader("Top Valors Compartits")
+        df_top = result["top_overlaps"]
+        if not df_top.empty:
+            df_top_renamed = df_top.rename(columns={
+                "Resolved_Name": "Actiu",
+                "Shared_Weight": "Pes Comú (%)",
+                "Clean_Weight_fnd": "Pes al Fons (%)",
+                "Clean_Weight_bmk": "Pes al Benchmark (%)"
+            })
+            st.dataframe(df_top_renamed, hide_index=True, use_container_width=True)
+        else:
+            st.write("No hi ha posicions comunes rellevants.")
