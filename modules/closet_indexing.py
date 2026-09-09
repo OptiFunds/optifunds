@@ -7,7 +7,6 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 HOLDINGS_PATH = DATA_DIR / "optifunds_holdings_spain.parquet"
 MASTER_PATH = DATA_DIR / "optifunds_master_spain.parquet"
 
-# Mapa de benchmarks de baix cost per categoria / paraula clau
 BENCHMARK_PROXIES = {
     "GLOBAL": {"isin": "IE00B03HD191", "name": "Vanguard Global Stock Index EUR Acc", "ter": 0.18},
     "US": {"isin": "IE00B5BMR087", "name": "iShares Core S&P 500 UCITS ETF USD (Acc)", "ter": 0.07},
@@ -16,53 +15,80 @@ BENCHMARK_PROXIES = {
     "TECH": {"isin": "LU0171310443", "name": "BGF World Technology Fund A2 EUR", "ter": 0.20}
 }
 
-def get_fund_positions(isin: str) -> pd.DataFrame:
+def get_fund_positions(identifier_list: list) -> pd.DataFrame:
     con = duckdb.connect(database=":memory:")
+    # Generem la llista de filtres SQL acceptant qualsevol dels identificadors del fons
+    clean_ids = [f"'{str(x).strip()}'" for x in identifier_list if pd.notna(x) and str(x).strip() != ""]
+    if not clean_ids:
+        con.close()
+        return pd.DataFrame()
+        
+    ids_clause = ", ".join(clean_ids)
     query = f"""
         SELECT "Holding RIC", "Holding Name", "Clean_Weight"
         FROM read_parquet('{HOLDINGS_PATH}')
-        WHERE "Instrument" = '{isin}'
+        WHERE "Instrument" IN ({ids_clause})
     """
     df = con.execute(query).df()
     con.close()
     return df
 
-def audit_closet_indexing(active_isin: str, benchmark_isin: str = None, benchmark_ter: float = None):
+def audit_closet_indexing(active_fund_name: str, benchmark_fund_name: str = None):
     con = duckdb.connect(database=":memory:")
-    f_act = con.execute(f"SELECT * FROM read_parquet('{MASTER_PATH}') WHERE \"Instrument\" = '{active_isin}'").df()
+    
+    # 1. Recuperem tota la informació del fons actiu pel seu nom
+    f_act = con.execute(
+        f"SELECT * FROM read_parquet('{MASTER_PATH}') WHERE \"Fund Name\" = ?", 
+        [active_fund_name]
+    ).df()
     
     if f_act.empty:
         con.close()
         return None
         
     act_row = f_act.iloc[0]
-    fund_name = act_row.get("Fund Name", "Fons Desconegut")
     ter_raw = act_row.get("TER_Estimat", 1.65)
     ter_fund = float(ter_raw) if pd.notna(ter_raw) else 1.65
+    
+    # Identificadors possibles (ISIN, RIC, Instrument)
+    act_ids = [act_row.get("ISIN"), act_row.get("RIC"), act_row.get("Instrument")]
 
-    # Si no es passa benchmark explícit, seleccionar per defecte Vanguard Global
-    if not benchmark_isin:
-        benchmark_isin = BENCHMARK_PROXIES["GLOBAL"]["isin"]
-        benchmark_ter = BENCHMARK_PROXIES["GLOBAL"]["ter"]
+    # 2. Recuperem la informació del benchmark
+    if not benchmark_fund_name:
         bmk_name = BENCHMARK_PROXIES["GLOBAL"]["name"]
+        bmk_isin = BENCHMARK_PROXIES["GLOBAL"]["isin"]
+        benchmark_ter = BENCHMARK_PROXIES["GLOBAL"]["ter"]
     else:
-        f_bmk = con.execute(f"SELECT * FROM read_parquet('{MASTER_PATH}') WHERE \"Instrument\" = '{benchmark_isin}'").df()
-        bmk_name = f_bmk.iloc[0].get("Fund Name", "Benchmark") if not f_bmk.empty else "Benchmark"
-        if benchmark_ter is None:
-            benchmark_ter = 0.18
-            
+        bmk_name = benchmark_fund_name
+        benchmark_ter = 0.18
+
+    f_bmk = con.execute(
+        f"SELECT * FROM read_parquet('{MASTER_PATH}') WHERE \"Fund Name\" = ? OR \"ISIN\" = ?", 
+        [bmk_name, bmk_name]
+    ).df()
+    
+    if not f_bmk.empty:
+        bmk_row = f_bmk.iloc[0]
+        bmk_ids = [bmk_row.get("ISIN"), bmk_row.get("RIC"), bmk_row.get("Instrument")]
+        ter_b = bmk_row.get("TER_Estimat", benchmark_ter)
+        benchmark_ter = float(ter_b) if pd.notna(ter_b) else benchmark_ter
+    else:
+        bmk_ids = [BENCHMARK_PROXIES["GLOBAL"]["isin"]]
+
     con.close()
 
-    p_act = get_fund_positions(active_isin)
-    p_bmk = get_fund_positions(benchmark_isin)
+    # 3. Consulta de holdings a DuckDB
+    p_act = get_fund_positions(act_ids)
+    p_bmk = get_fund_positions(bmk_ids)
 
     if p_act.empty or p_bmk.empty:
         return {
-            "fund_name": fund_name,
+            "fund_name": active_fund_name,
             "benchmark_name": bmk_name,
             "error": "Sense posicions detallades a la base de dades"
         }
 
+    # Creuament de carteres per codi de valor
     merged = pd.merge(p_act, p_bmk, on="Holding RIC", how="outer", suffixes=("_fnd", "_bmk")).fillna(0.0)
 
     sum_fnd = merged["Clean_Weight_fnd"].sum()
@@ -76,13 +102,10 @@ def audit_closet_indexing(active_isin: str, benchmark_isin: str = None, benchmar
     else:
         active_share, overlap = 100.0, 0.0
 
-    # Càlcul TER efectiu sobre la part activa
     as_ratio = max(active_share / 100.0, 0.05)
     ter_actiu = (ter_fund - (1 - as_ratio) * benchmark_ter) / as_ratio
 
-    # Diagnòstic professional
-    is_indexed = any(k in fund_name.lower() for k in ["index", "etf", "vanguard", "core", "swap", "screened"])
-    
+    is_indexed = any(k in active_fund_name.lower() for k in ["index", "etf", "vanguard", "core", "swap", "screened"])
     if is_indexed:
         category = "Indexat Legítim"
         alert_code = "INDEXED"
@@ -96,7 +119,6 @@ def audit_closet_indexing(active_isin: str, benchmark_isin: str = None, benchmar
         category = "Gestió Activa de Convicció"
         alert_code = "HEALTHY"
 
-    # Top títols solapats
     merged["Shared_Weight"] = np.minimum(merged["Clean_Weight_fnd"], merged["Clean_Weight_bmk"])
     merged["Resolved_Name"] = merged["Holding Name_fnd"].replace(0.0, np.nan).fillna(merged["Holding Name_bmk"])
     top_overlap_holdings = (
@@ -106,7 +128,7 @@ def audit_closet_indexing(active_isin: str, benchmark_isin: str = None, benchmar
     )
 
     return {
-        "fund_name": fund_name,
+        "fund_name": active_fund_name,
         "benchmark_name": bmk_name,
         "ter_fund": ter_fund,
         "ter_benchmark": benchmark_ter,
