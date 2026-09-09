@@ -3,10 +3,9 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 from modules.data_loader import load_all_data
+from modules.pdf_generator import build_closet_indexing_pdf
 
 st.set_page_config(page_title="Closet Indexing - OptiFunds", layout="wide")
-
-# Recollim els 5 valors que retorna load_all_data()
 df_master, df_holdings, _, _, fund_options = load_all_data()
 
 st.title("Detector de Closet Indexing")
@@ -34,7 +33,6 @@ isin_fnd = df_master.loc[df_master["Fund Name"] == fund_name, "Instrument"].valu
 ter_bmk = float(df_master.loc[df_master["Instrument"] == isin_bmk, "TER_Estimat"].values[0])
 ter_fnd = float(df_master.loc[df_master["Instrument"] == isin_fnd, "TER_Estimat"].values[0])
 
-# Obtenir holdings i assegurar que tenim pesos
 p_bmk = df_holdings[df_holdings["Instrument"] == isin_bmk][["Holding RIC", "Clean_Weight"]]
 p_fnd = df_holdings[df_holdings["Instrument"] == isin_fnd][["Holding RIC", "Clean_Weight"]]
 
@@ -60,10 +58,32 @@ m2.metric("Active Share", f"{active_share:.1f} %")
 m3.metric("TER Oficial", f"{ter_fnd:.2f} %")
 m4.metric("TER Efectiu Actiu", f"{ter_actiu:.2f} %")
 
-if active_share < 50 and not any(k in fund_name.lower() for k in ["index", "etf", "vanguard", "core"]):
+is_closet = active_share < 50 and not any(k in fund_name.lower() for k in ["index", "etf", "vanguard", "core"])
+
+if is_closet:
     st.error(f"Alerta de Closet Indexing: Solapament del {overlap:.1f}%. Es paga un {ter_actiu:.2f}% pel capital realment gestionat.")
 else:
     st.success(f"Gestió diferencial confirmada (Active Share: {active_share:.1f}%).")
+
+# Generador del fitxer PDF
+pdf_bytes = build_closet_indexing_pdf(
+    fund_name=fund_name,
+    bmk_name=bmk_name,
+    isin_fund=isin_fnd,
+    isin_bmk=isin_bmk,
+    overlap=overlap,
+    active_share=active_share,
+    ter_fund=ter_fnd,
+    ter_actiu=ter_actiu,
+    is_closet=is_closet
+)
+
+st.download_button(
+    label="Descarregar Informe Executiu (PDF)",
+    data=pdf_bytes,
+    file_name=f"Auditoria_{isin_fnd}.pdf",
+    mime="application/pdf"
+)
 
 df_drag = pd.DataFrame({
     "Component": ["Part Replicada de l'Índex", "Part Activa Diferenciada"],
