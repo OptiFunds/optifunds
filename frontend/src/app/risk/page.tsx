@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { getRiskReturnUniverse, RiskReturnPoint } from "@/lib/api";
 import Chart from "@/components/Chart";
+import { Activity, Sparkles, TrendingUp } from "lucide-react";
 
 const BASE_UNIVERSE: RiskReturnPoint[] = [
   { isin: "IE00B03HD191", fund_name: "Vanguard Global Stock Index", ter: 0.18, volatility: 14.8, return_annual: 9.4, sharpe_ratio: 0.58 },
@@ -92,7 +93,7 @@ export default function RiskReturnPage() {
     series: [
       {
         type: "scatter",
-        symbolSize: 8,
+        symbolSize: 10,
         data: data.map((d) => [d.volatility, d.return_annual, d.sharpe_ratio, d]),
         itemStyle: { opacity: 0.85 },
       },
@@ -100,33 +101,49 @@ export default function RiskReturnPage() {
   }), [data]);
 
   return (
-    <div className="p-10 max-w-6xl space-y-8">
-      {/* Capçalera */}
-      <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-200/80 pb-5">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Frontera de Risc vs Rendibilitat
-          </h1>
-          <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-            Univers UCITS
-          </span>
-        </div>
-        <div className="text-right font-mono text-xs text-slate-500">
-          <span>Mostra: </span>
-          <span className="font-semibold text-slate-800">{data.length} Vehicles</span>
-        </div>
-      </div>
+    <div className="bg-white flex flex-col font-sans">
+      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 sm:px-10 lg:px-14 py-8 space-y-8">
+        
+        {/* TITULAR EDITORIAL */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-[#00B050] border border-emerald-100 uppercase tracking-wider">
+                Univers de Risc & Rendibilitat // UCITS
+              </span>
+              <span className="text-xs text-slate-400 font-mono">SHARPE GRADIENT</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-950 tracking-tight leading-snug">
+              Frontera de Risc: <span className="text-[#00B050]">Rendibilitat vs Volatilitat</span>
+            </h1>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Gràfic de dispersió quantitativa de mercat: visualitza quins fons compensen el risc assumit amb ràtios de Sharpe superiors i quins cobren comissions excessives.
+            </p>
+          </div>
 
-      {/* Contingenedor del Gràfic */}
-      <div className="bg-white border border-slate-200 shadow-sm p-6 rounded-xl space-y-4">
-        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-900">
-            Dispersió Volatilitat / CAGR (Gradient de Sharpe)
-          </span>
-          <span className="text-[10px] font-mono text-slate-400">HISTORICAL NAV ENGINE</span>
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 text-xs font-mono text-slate-700 shadow-2xs shrink-0 self-start sm:self-center">
+            <span className="text-slate-400">Mostra:</span>
+            <span className="font-bold text-[#00B050]">{data.length} Vehicles</span>
+          </div>
         </div>
-        <Chart option={chartOptions} height="500px" />
-      </div>
+
+        {/* CONTENIDOR DEL GRÀFIC BENTO */}
+        <div className="bg-white border border-slate-200/90 shadow-2xs p-6 sm:p-8 rounded-3xl space-y-4">
+          <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                Dispersió Volatilitat / CAGR (Gradient de Sharpe)
+              </h3>
+              <p className="text-xs text-slate-400">Comportament històric multianual del catàleg</p>
+            </div>
+            <span className="text-[10px] font-mono text-slate-400 px-2.5 py-1 rounded bg-slate-50 border border-slate-200">
+              HISTORICAL NAV ENGINE
+            </span>
+          </div>
+          <Chart option={chartOptions} height="520px" />
+        </div>
+
+      </main>
     </div>
   );
 }

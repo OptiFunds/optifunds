@@ -415,31 +415,24 @@ export default function PortfolioBuilderPage() {
   }, [mptData, activeMatrixTab]);
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
-      {/* Capçalera */}
-      <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-200 pb-5">
-        <div>
+    <div className="bg-white flex flex-col font-sans">
+      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 sm:px-10 lg:px-14 py-8 space-y-8">
+        
+        {/* TITULAR EDITORIAL */}
+        <div className="space-y-2 border-b border-slate-100 pb-6">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono font-semibold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-[#00B050] border border-emerald-100 uppercase tracking-wider">
               Modern Portfolio Theory // MPT 360°
             </span>
-            <span className="text-[11px] font-mono text-slate-400">Global Look-Through & Risk Allocation</span>
+            <span className="text-xs text-slate-400 font-mono">GLOBAL LOOK-THROUGH & ALLOCATION</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 mt-1">
-            Portfolio Builder: Eficiència & Distribució Mundial
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-950 tracking-tight leading-snug">
+            Portfolio Builder: <span className="text-[#00B050]">Eficiència & Distribució Mundial</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Analítica matricial de Markowitz, radiografia d'accions subjacents i exposició macroeconòmica agregada.
+          <p className="text-sm text-slate-600 max-w-2xl leading-relaxed">
+            Analítica matricial de Markowitz, radiografia d&apos;accions subjacents i exposició macroeconòmica agregada per a inversors conscients dels costos.
           </p>
         </div>
-
-        <Link
-          href="/"
-          className="text-xs font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm transition-colors"
-        >
-          ← Tornar al Mercat
-        </Link>
-      </div>
 
       {/* Selector de Cartera */}
       <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-6 space-y-4">
@@ -835,6 +828,7 @@ export default function PortfolioBuilderPage() {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 }

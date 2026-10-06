@@ -61,12 +61,6 @@ function ClosetIndexingContent() {
   const [audit, setAudit] = useState<ClosetIndexResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Cerca ràpida de la capçalera
-  const [headerQuery, setHeaderQuery] = useState("");
-  const [headerResults, setHeaderResults] = useState<FundSummary[]>([]);
-  const [isHeaderOpen, setIsHeaderOpen] = useState(false);
-  const headerSearchRef = useRef<HTMLDivElement>(null);
-
   // 1. Carregar llista inicial de fons i catàleg de benchmarks
   useEffect(() => {
     searchFunds().then((data) => {
@@ -112,36 +106,6 @@ function ClosetIndexingContent() {
     }
   }, [selectedFund, selectedBmk]);
 
-  // Debounce cerca capçalera
-  useEffect(() => {
-    if (!headerQuery.trim()) {
-      setHeaderResults([]);
-      setIsHeaderOpen(false);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      try {
-        const res = await searchFunds(headerQuery);
-        setHeaderResults(res.slice(0, 6));
-        setIsHeaderOpen(true);
-      } catch (err) {
-        console.error(err);
-      }
-    }, 200);
-
-    return () => clearTimeout(timer);
-  }, [headerQuery]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (headerSearchRef.current && !headerSearchRef.current.contains(e.target as Node)) {
-        setIsHeaderOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   // Agrupació de benchmarks per mercat
   const groupedBenchmarks = benchmarks.reduce((acc, b) => {
     const m = b.market || "Altres Índexs";
@@ -151,88 +115,8 @@ function ClosetIndexingContent() {
   }, {} as Record<string, BenchmarkItem[]>);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans">
-      
-      {/* 1. BARRA SUPERIOR */}
-      <header className="w-full border-b border-slate-100 py-3 px-6 sm:px-10 lg:px-14 flex items-center justify-between bg-white sticky top-0 z-50">
-        <div className="relative h-9 sm:h-10 w-44 sm:w-50 shrink-0">
-          <Link href="/">
-            <Image
-              src="/logo-optifunds.jpg"
-              alt="OptiFunds"
-              fill
-              className="object-contain object-left cursor-pointer"
-              priority
-              unoptimized
-            />
-          </Link>
-        </div>
-
-        {/* Cerca subtil al centre */}
-        <div ref={headerSearchRef} className="relative w-full max-w-sm sm:max-w-md mx-4">
-          <div className="relative flex items-center">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Cerca un altre fons per auditar..."
-              value={headerQuery}
-              onChange={(e) => setHeaderQuery(e.target.value)}
-              onFocus={() => {
-                if (headerResults.length > 0) setIsHeaderOpen(true);
-              }}
-              className="w-full pl-9 pr-12 py-1.5 bg-slate-50 hover:bg-slate-100/80 focus:bg-white text-xs text-slate-900 placeholder:text-slate-400 rounded-full border border-slate-200/80 focus:border-[#00B050] focus:ring-1 focus:ring-[#00B050] focus:outline-none transition-all"
-            />
-            <kbd className="absolute right-3 text-[10px] font-mono text-slate-400 pointer-events-none border border-slate-200 rounded px-1.5 py-0.5 bg-white">
-              ⌘K
-            </kbd>
-          </div>
-
-          {isHeaderOpen && headerResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-slate-100 py-2 z-50 max-h-72 overflow-y-auto">
-              {headerResults.map((f) => (
-                <button
-                  key={f.isin}
-                  onClick={() => {
-                    setIsHeaderOpen(false);
-                    setHeaderQuery("");
-                    setSelectedFund(f.isin);
-                  }}
-                  className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center justify-between text-xs transition-colors"
-                >
-                  <div className="pr-2 truncate">
-                    <div className="font-semibold text-slate-900 truncate">{f.fund_name}</div>
-                    <div className="text-[10px] text-slate-400 font-mono">{f.isin}</div>
-                  </div>
-                  {f.ter !== undefined && (
-                    <span className="text-[10px] font-mono font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
-                      TER: {f.ter}%
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/optimize"
-            className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-colors"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Smart Switch</span>
-          </Link>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-950 transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Inici</span>
-          </Link>
-        </div>
-      </header>
-
-      {/* 2. COS DE LA PÀGINA */}
+    <div className="bg-white flex flex-col font-sans">
+      {/* COS DE LA PÀGINA */}
       <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 sm:px-10 lg:px-14 py-8 space-y-8">
         
         {/* TITULAR EDITORIAL */}

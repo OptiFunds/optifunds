@@ -126,78 +126,80 @@ export default function SimulatorPage() {
   }), [activeSimulation, passiveSimulation]);
 
   return (
-    <div className="p-10 max-w-6xl space-y-8 mx-auto">
-      {/* Capçalera */}
-      <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-200/80 pb-5">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-              Model d'Interès Compost
-            </span>
-            <span className="text-xs font-mono text-slate-400">MIFID II COST TRANSPARENCY</span>
+    <div className="bg-white flex flex-col font-sans">
+      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 sm:px-10 lg:px-14 py-8 space-y-8">
+        
+        {/* TITULAR EDITORIAL */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-[#00B050] border border-emerald-100 uppercase tracking-wider">
+                Model d'Interès Compost & MiFID II
+              </span>
+              <span className="text-xs text-slate-400 font-mono">COST TRANSPARENCY</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-950 tracking-tight leading-snug">
+              Simulador d'Erosió per <span className="text-[#00B050]">Comissions (TER)</span>
+            </h1>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Quantificació matemàtica de la pèrdua de capital a llarg termini per l'efecte continuat de costos de gestió bancària.
+            </p>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Simulador d'Erosió Patrimonial per Comissions (TER)
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Quantificació de la pèrdua acumulada de capital per l'efecte continuat de costos de gestió bancària.
-          </p>
+
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 text-xs font-mono text-slate-700 shadow-2xs shrink-0">
+            <span className="text-slate-400">Horitzó seleccionat:</span>
+            <span className="font-bold text-[#00B050] text-sm">{horizonYears} Anys</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-600 shadow-2xs">
-          <span>Horitzó seleccionat:</span>
-          <span className="font-bold text-slate-900">{horizonYears} Anys</span>
-        </div>
-      </div>
+        {/* TARGETES DE RESULTAT EXECUTIU BENTO */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white border-2 border-emerald-200/80 shadow-2xs p-6 rounded-3xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-mono uppercase text-slate-400 font-semibold">Capital Solució Indexada</span>
+              <span className="text-[10px] font-mono font-bold text-[#00B050] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                TER {terPassive.toFixed(2)}%
+              </span>
+            </div>
+            <p className="text-3xl font-extrabold font-mono text-[#00B050] mt-1">
+              {Math.round(finalPassive.net_capital).toLocaleString("ca-ES")} €
+            </p>
+            <span className="text-[11px] text-slate-500 block">Patrimoni net disponible final</span>
+          </div>
 
-      {/* Targetes de Resultat Executiu */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200 shadow-sm p-5 rounded-xl">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono uppercase text-slate-400">Capital Solució Indexada</span>
-            <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
-              TER {terPassive.toFixed(2)}%
+          <div className="bg-white border border-slate-200/90 shadow-2xs p-6 rounded-3xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-mono uppercase text-slate-400 font-semibold">Capital Gestió Activa</span>
+              <span className="text-[10px] font-mono font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                TER {terActive.toFixed(2)}%
+              </span>
+            </div>
+            <p className="text-3xl font-extrabold font-mono text-slate-800 mt-1">
+              {Math.round(finalActive.net_capital).toLocaleString("ca-ES")} €
+            </p>
+            <span className="text-[11px] text-slate-500 block">Patrimoni net disponible final</span>
+          </div>
+
+          <div className="bg-rose-50/40 border-2 border-rose-200 shadow-2xs p-6 rounded-3xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-mono uppercase text-rose-700 font-semibold">
+                Pèrdua Directa per Comissions
+              </span>
+              <span className="text-[10px] font-mono text-rose-800 font-bold bg-rose-100/70 px-2 py-0.5 rounded-full">
+                -{pctFeeLoss.toFixed(1)}% del total
+              </span>
+            </div>
+            <p className="text-3xl font-extrabold font-mono text-rose-600 mt-1">
+              -{Math.round(deltaFeeLoss).toLocaleString("ca-ES")} €
+            </p>
+            <span className="text-[11px] text-rose-800/80 block">
+              Erosió patrimonial retinguda per l'entitat
             </span>
           </div>
-          <p className="text-2xl font-bold font-mono text-emerald-600 mt-2">
-            {Math.round(finalPassive.net_capital).toLocaleString("ca-ES")} €
-          </p>
-          <span className="text-[10px] font-mono text-slate-500 mt-1 block">Patrimoni net acumulat</span>
         </div>
 
-        <div className="bg-white border border-slate-200 shadow-sm p-5 rounded-xl">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono uppercase text-slate-400">Capital Gestió Activa</span>
-            <span className="text-[10px] font-mono text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
-              TER {terActive.toFixed(2)}%
-            </span>
-          </div>
-          <p className="text-2xl font-bold font-mono text-slate-800 mt-2">
-            {Math.round(finalActive.net_capital).toLocaleString("ca-ES")} €
-          </p>
-          <span className="text-[10px] font-mono text-slate-500 mt-1 block">Patrimoni net acumulat</span>
-        </div>
-
-        <div className="bg-white border border-rose-200 shadow-sm p-5 rounded-xl bg-rose-50/20">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono uppercase text-rose-700 font-semibold">
-              Pèrdua Directa per Comissions
-            </span>
-            <span className="text-[10px] font-mono text-rose-800 font-bold">
-              -{pctFeeLoss.toFixed(1)}% del potencial
-            </span>
-          </div>
-          <p className="text-2xl font-bold font-mono text-rose-600 mt-2">
-            -{Math.round(deltaFeeLoss).toLocaleString("ca-ES")} €
-          </p>
-          <span className="text-[10px] font-mono text-slate-500 mt-1 block">
-            Diners retinguts per comissions extra
-          </span>
-        </div>
-      </div>
-
-      {/* Controls d'Entrada i Paràmetres */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* CONTROLS D'ENTRADA I PARÀMETRES BENTO */}
+        <div className="bg-white border border-slate-200/90 shadow-2xs rounded-3xl p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="space-y-4">
           <div>
             <label className="block text-[11px] font-mono uppercase text-slate-500 mb-1.5">
@@ -284,32 +286,34 @@ export default function SimulatorPage() {
       </div>
 
       {/* Gràfic d'Interès Compost */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div className="bg-white border border-slate-200/90 shadow-2xs rounded-3xl p-6 sm:p-8 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-900">
+            <h2 className="text-base font-bold text-slate-900">
               Projecció d'Interès Compost Acumulat
             </h2>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-xs text-slate-400">
               Evolució temporal comparada del capital net disponible
             </p>
           </div>
-          <span className="text-[10px] font-mono text-slate-400">LOOK-FORWARD CAPITAL MODEL</span>
+          <span className="text-[10px] font-mono text-slate-400 px-2.5 py-1 rounded bg-slate-50 border border-slate-200">
+            LOOK-FORWARD CAPITAL MODEL
+          </span>
         </div>
 
         <div className="w-full">
-          <Chart option={chartOptions} height="360px" />
+          <Chart option={chartOptions} height="380px" />
         </div>
       </div>
 
       {/* Taula d'Evolució Quinquennal */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+      <div className="bg-white border border-slate-200/90 shadow-2xs rounded-3xl overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900">
+            <h3 className="text-base font-bold text-slate-900">
               Auditoria de Desviació Quinquennal
             </h3>
-            <p className="text-[11px] text-slate-400">Detall de la pèrdua acumulada per fites temporals</p>
+            <p className="text-xs text-slate-400">Detall de la pèrdua acumulada per fites temporals</p>
           </div>
         </div>
 
@@ -317,27 +321,27 @@ export default function SimulatorPage() {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-mono border-b border-slate-200">
               <tr>
-                <th className="py-2.5 px-4">Horitzó</th>
-                <th className="py-2.5 px-4 text-right">Capital Indexat</th>
-                <th className="py-2.5 px-4 text-right">Capital Actiu</th>
-                <th className="py-2.5 px-4 text-right">Comissions Extra Perdudes</th>
-                <th className="py-2.5 px-4 text-right">% Pèrdua</th>
+                <th className="py-3 px-5">Horitzó</th>
+                <th className="py-3 px-5 text-right">Capital Indexat</th>
+                <th className="py-3 px-5 text-right">Capital Actiu</th>
+                <th className="py-3 px-5 text-right">Comissions Extra Perdudes</th>
+                <th className="py-3 px-5 text-right">% Pèrdua</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono">
               {quinquennialRows.map((row) => (
                 <tr key={row.year} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-2.5 px-4 font-bold text-slate-900">Any {row.year}</td>
-                  <td className="py-2.5 px-4 text-right text-emerald-600 font-semibold">
+                  <td className="py-3.5 px-5 font-bold text-slate-900">Any {row.year}</td>
+                  <td className="py-3.5 px-5 text-right text-[#00B050] font-bold">
                     {Math.round(row.passiveCap).toLocaleString("ca-ES")} €
                   </td>
-                  <td className="py-2.5 px-4 text-right text-slate-700">
+                  <td className="py-3.5 px-5 text-right text-slate-700 font-medium">
                     {Math.round(row.activeCap).toLocaleString("ca-ES")} €
                   </td>
-                  <td className="py-2.5 px-4 text-right text-rose-600 font-semibold">
+                  <td className="py-3.5 px-5 text-right text-rose-600 font-bold">
                     -{Math.round(row.feeLoss).toLocaleString("ca-ES")} €
                   </td>
-                  <td className="py-2.5 px-4 text-right text-slate-600">
+                  <td className="py-3.5 px-5 text-right text-slate-600">
                     -{row.feePct.toFixed(1)}%
                   </td>
                 </tr>
@@ -348,7 +352,7 @@ export default function SimulatorPage() {
       </div>
 
       {/* BANNER CTA: DE LA SIMULACIÓ A L'ACCIÓ */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl p-6 sm:p-8 flex items-center justify-between gap-6 flex-wrap shadow-lg">
+      <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-3xl p-6 sm:p-8 flex items-center justify-between gap-6 flex-wrap shadow-lg">
         <div className="space-y-1.5 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 text-white text-[11px] font-mono font-medium tracking-wide">
             <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
@@ -363,12 +367,14 @@ export default function SimulatorPage() {
         </div>
         <Link
           href="/optimize"
-          className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white text-emerald-900 hover:bg-emerald-50 font-bold text-xs sm:text-sm shadow-md transition-all hover:shadow-lg shrink-0"
+          className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-white text-emerald-900 hover:bg-emerald-50 font-bold text-xs sm:text-sm shadow-md transition-all hover:shadow-lg shrink-0"
         >
           <span>Trobar Alternatives a l'Smart Switch</span>
           <ArrowRight className="w-4 h-4 text-emerald-700" />
         </Link>
       </div>
+
+      </main>
     </div>
   );
 }

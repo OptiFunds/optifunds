@@ -145,33 +145,8 @@ export default function FundDetailPage() {
   const alternativesList = Array.isArray(alternatives) ? alternatives : [];
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans">
-      
-      {/* 1. BARRA SUPERIOR INSTITUCIONAL */}
-      <header className="w-full border-b border-slate-100 py-3 px-6 sm:px-10 lg:px-14 flex items-center justify-between bg-white sticky top-0 z-50">
-        <div className="relative h-9 sm:h-10 w-44 sm:w-50 shrink-0">
-          <Link href="/">
-            <Image
-              src="/logo-optifunds.jpg"
-              alt="OptiFunds"
-              fill
-              className="object-contain object-left cursor-pointer"
-              priority
-              unoptimized
-            />
-          </Link>
-        </div>
-
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-950 transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Explorador de Fons</span>
-        </Link>
-      </header>
-
-      {/* 2. COS PRINCIPAL DE LA FITXA */}
+    <div className="bg-white flex flex-col font-sans">
+      {/* COS PRINCIPAL DE LA FITXA */}
       <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 sm:px-10 lg:px-14 py-8 space-y-8">
         
         {/* ENCAPÇALAMENT: NOM DEL FONS EN NEGRETA A DALT I DADES A BAIX */}

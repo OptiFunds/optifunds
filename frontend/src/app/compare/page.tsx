@@ -172,32 +172,36 @@ function CompareContent() {
 
 
   return (
-    <div className="p-8 max-w-6xl space-y-8 mx-auto">
-      
-      {/* Botó de retorn i capçalera */}
-      <div>
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors mb-4"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" /> Tornar a la Fitxa del Fons
-        </button>
+    <div className="bg-white flex flex-col font-sans">
+      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 sm:px-10 lg:px-14 py-8 space-y-8">
+        
+        {/* TITULAR EDITORIAL I RETORN */}
+        <div className="space-y-4 border-b border-slate-100 pb-6">
+          <button
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Tornar a la Fitxa del Fons
+          </button>
 
-        <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-200 pb-5">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-mono font-medium mb-1.5">
-              <ArrowLeftRight className="w-3.5 h-3.5" />
-              <span>Comparativa Cara a Cara 1:1</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-[#00B050] border border-emerald-100 uppercase tracking-wider">
+                Diagnòstic Comparatiu 1:1
+              </span>
+              <span className="text-xs text-slate-400 font-mono">LOOK-THROUGH AUDIT</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Diagnòstic Comparatiu de Vehicles
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-950 tracking-tight leading-snug">
+              Cara a Cara: <span className="text-[#00B050]">Look-Through & Solapament</span>
             </h1>
+            <p className="text-sm text-slate-600 max-w-2xl leading-relaxed">
+              Radiografia microscòpica comparada de dos vehicles d'inversió: avalua acció per acció si pagues gestió activa autèntica o una simple duplicitat de cartera.
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* Targetes dels dos fons cara a cara */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Targetes dels dos fons cara a cara */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* Fons 1 */}
         <div className="bg-white border-2 border-blue-200/80 rounded-2xl p-6 shadow-xs space-y-4 relative">
@@ -484,6 +488,7 @@ function CompareContent() {
         )}
       </div>
 
+      </main>
     </div>
   );
 }
