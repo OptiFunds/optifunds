@@ -5,7 +5,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -426,6 +426,27 @@ def get_fund_deep_dive(isin: str, min_overlap: float = 0.0):
         },
         "alternatives": alternatives[:3]
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Descàrrega d'Informe d'Auditoria Fiduciària en PDF (MiFID II)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/v1/funds/{isin}/pdf")
+def get_fund_audit_pdf(isin: str):
+    try:
+        from modules.pdf_generator import generate_fund_360_pdf
+        data = get_fund_deep_dive(isin)
+        pdf_bytes = generate_fund_360_pdf(data)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="Auditoria_OptiFunds_{isin}.pdf"'
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generant l'informe PDF: {str(e)}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

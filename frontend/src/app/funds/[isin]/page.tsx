@@ -10,9 +10,10 @@ import {
   Search, 
   ShieldCheck, 
   AlertTriangle, 
-  Sparkles
+  Sparkles,
+  Download
 } from "lucide-react";
-import { getFundDeepDive, searchFunds, FundDeepDive, FundSummary } from "@/lib/api";
+import { getFundDeepDive, searchFunds, getFundAuditPdfUrl, FundDeepDive, FundSummary } from "@/lib/api";
 
 export default function FundDetailPage() {
   const params = useParams();
@@ -236,6 +237,17 @@ export default function FundDetailPage() {
                 </div>
               </div>
             )}
+
+            <a
+              href={getFundAuditPdfUrl(profile.isin)}
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+              className="mt-3 inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-2xs transition-colors"
+            >
+              <Download className="w-3.5 h-3.5 text-[#00B050]" />
+              <span>Descarregar Dictamen PDF</span>
+            </a>
           </div>
         </div>
 

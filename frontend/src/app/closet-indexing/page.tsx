@@ -12,9 +12,10 @@ import {
   ArrowRight,
   TrendingUp,
   Percent,
-  Layers
+  Layers,
+  Download
 } from "lucide-react";
-import { searchFunds, auditClosetIndexing, FundSummary, ClosetIndexResponse } from "@/lib/api";
+import { searchFunds, auditClosetIndexing, getFundAuditPdfUrl, FundSummary, ClosetIndexResponse } from "@/lib/api";
 
 const DEFAULT_BENCHMARKS = [
   { isin: "IE00B03HD191", name: "Vanguard Global Stock Index EUR Acc (TER 0.18%)" },
@@ -370,6 +371,20 @@ export default function ClosetIndexingPage() {
                     Exposició simètrica que es podria contractar directament mitjançant un índex passiu o ETF (0,07% - 0,18%).
                   </p>
                 </div>
+              </div>
+
+              {/* ACCIÓ: DESCARREGAR INFORME PDF */}
+              <div className="flex justify-end pt-2">
+                <a
+                  href={getFundAuditPdfUrl(selectedFund)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-colors"
+                >
+                  <Download className="w-4 h-4 text-[#00B050]" />
+                  <span>Descarregar Informe d'Auditoria MiFID II (PDF)</span>
+                </a>
               </div>
             </div>
 

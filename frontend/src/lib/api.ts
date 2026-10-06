@@ -261,6 +261,10 @@ export async function getFundDeepDive(isin: string): Promise<FundDeepDive> {
   return res.json();
 }
 
+export function getFundAuditPdfUrl(isin: string): string {
+  return `${API_BASE}/funds/${encodeURIComponent(isin)}/pdf`;
+}
+
 export function simulateCompoundInterest(
   initialCapital: number,
   monthlyContribution: number,
