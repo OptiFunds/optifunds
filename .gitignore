@@ -36,5 +36,7 @@ frontend/build/
 
 # Local data storage and raw dumps
 data_storage/
+data/cache_cnmv/
 data/optifunds_holdings_spain.csv
 data/instruments_to_download.csv
+
