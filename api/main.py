@@ -614,6 +614,176 @@ def compute_portfolio(req: PortfolioRequest):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Catàleg de Benchmarks Verificats i Recomanació Intel·ligent
+# ─────────────────────────────────────────────────────────────────────────────
+
+CURATED_BENCHMARKS = [
+    {
+        "isin": "FR0010251744",
+        "name": "Amundi IBEX 35 UCITS ETF Dist",
+        "market": "Espanya (IBEX 35)",
+        "region": "spain",
+        "ter": 0.30,
+        "is_default": True,
+    },
+    {
+        "isin": "ES0105336038",
+        "name": "Accion IBEX 35 ETF, FI Cotizado Armonizado",
+        "market": "Espanya (IBEX 35)",
+        "region": "spain",
+        "ter": 0.82,
+        "is_default": False,
+    },
+    {
+        "isin": "ES0119203034",
+        "name": "Santander Indice Espana OL, FI",
+        "market": "Espanya (IBEX 35)",
+        "region": "spain",
+        "ter": 0.74,
+        "is_default": False,
+    },
+    {
+        "isin": "LU0496786574",
+        "name": "Amundi Core S&P 500 Swap UCITS ETF EUR Dist",
+        "market": "Estats Units (S&P 500)",
+        "region": "usa",
+        "ter": 0.05,
+        "is_default": True,
+    },
+    {
+        "isin": "IE0006IP4XZ8",
+        "name": "Amundi MSCI USA ESG Broad Transition UCITS ETF Acc",
+        "market": "Estats Units (MSCI USA ESG)",
+        "region": "usa",
+        "ter": 0.07,
+        "is_default": False,
+    },
+    {
+        "isin": "IE00BD4TYG73",
+        "name": "UBS Core MSCI USA hEUR UCITS ETF EUR acc",
+        "market": "Estats Units (MSCI USA)",
+        "region": "usa",
+        "ter": 0.06,
+        "is_default": False,
+    },
+    {
+        "isin": "IE00B60SWX25",
+        "name": "Invesco EURO STOXX 50 UCITS ETF Acc",
+        "market": "Europa (EURO STOXX 50)",
+        "region": "europe",
+        "ter": 0.05,
+        "is_default": True,
+    },
+    {
+        "isin": "LU1931974429",
+        "name": "Amundi Prime Eurozone UCITS ETF DR D",
+        "market": "Europa (Eurozone)",
+        "region": "europe",
+        "ter": 0.05,
+        "is_default": False,
+    },
+    {
+        "isin": "LU0446734104",
+        "name": "UBS Core MSCI Europe UCITS ETF EUR dis",
+        "market": "Europa (MSCI Europe)",
+        "region": "europe",
+        "ter": 0.06,
+        "is_default": False,
+    },
+    {
+        "isin": "IE00BYX5NX33",
+        "name": "Fidelity MSCI World Index P EUR Acc",
+        "market": "Global (MSCI World)",
+        "region": "world",
+        "ter": 0.12,
+        "is_default": True,
+    },
+    {
+        "isin": "IE000Y77LGG9",
+        "name": "Amundi MSCI World SRI Climate PA UCITS ETF Acc",
+        "market": "Global (MSCI World SRI)",
+        "region": "world",
+        "ter": 0.18,
+        "is_default": False,
+    },
+    {
+        "isin": "IE00BYX2JD69",
+        "name": "iShares MSCI World SRI UCITS ETF EUR (Acc)",
+        "market": "Global (MSCI World SRI)",
+        "region": "world",
+        "ter": 0.20,
+        "is_default": False,
+    },
+]
+
+@app.get("/api/v1/analytics/benchmarks")
+def get_benchmarks_catalog():
+    return {"benchmarks": CURATED_BENCHMARKS}
+
+@app.get("/api/v1/analytics/benchmark-recommendation")
+def get_benchmark_recommendation(fund: str):
+    from modules.optimizer import extract_index_fingerprint
+    m_path = DATA_DIR / "optifunds_master_spain.parquet"
+    con = duckdb.connect()
+    q_safe = fund.replace("'", "''").strip()
+    
+    q = f"""
+        SELECT 
+            COALESCE(ISIN, Instrument, '') AS isin,
+            COALESCE("Fund Name", 'Sense Nom') AS name,
+            COALESCE("Asset_Class", '') AS asset_class,
+            ROUND(COALESCE(TRY_CAST(TER_Estimat AS DOUBLE), 1.50), 2) AS ter
+        FROM read_parquet('{m_path}')
+        WHERE ISIN = '{q_safe}' 
+           OR Instrument = '{q_safe}' 
+           OR RIC = '{q_safe}' 
+           OR "Fund Name" ILIKE '%{q_safe}%'
+        LIMIT 1
+    """
+    df = con.execute(q).df()
+    con.close()
+    
+    if df.empty:
+        bmk = next(b for b in CURATED_BENCHMARKS if b["region"] == "world" and b["is_default"])
+        return {
+            "fund_isin": q_safe,
+            "fund_name": q_safe,
+            "category": "Desconeguda",
+            "detected_region": "world",
+            "recommended_benchmark": bmk,
+            "reason": "Fons no localitzat exactament; assignat índex de referència global MSCI World."
+        }
+        
+    row = df.iloc[0]
+    fund_name = str(row["name"])
+    asset_class = str(row["asset_class"])
+    fund_isin = str(row["isin"])
+    
+    fp = extract_index_fingerprint(fund_name, asset_class)
+    reg = fp.get("region") or "world"
+    
+    bmk = next((b for b in CURATED_BENCHMARKS if b["region"] == reg and b["is_default"]), None)
+    if not bmk:
+        bmk = next(b for b in CURATED_BENCHMARKS if b["region"] == "world" and b["is_default"])
+        
+    reason_map = {
+        "spain": "Fons de renda variable espanyola ('Equity Spain'). El benchmark oficial de mercat és l'IBEX 35.",
+        "usa": "Fons de renda variable nord-americana ('Equity US'). El benchmark oficial de mercat és l'S&P 500.",
+        "europe": "Fons de renda variable europea ('Equity Europe'). El benchmark oficial de mercat és l'índex EURO STOXX 50 / MSCI Europe.",
+        "world": "Fons de renda variable global ('Equity Global'). El benchmark de referència és l'índex MSCI World."
+    }
+    
+    return {
+        "fund_isin": fund_isin,
+        "fund_name": fund_name,
+        "category": asset_class,
+        "detected_region": reg,
+        "recommended_benchmark": bmk,
+        "reason": reason_map.get(reg, f"Classificat com a regió '{reg}'. S'assigna el benchmark de referència corresponent.")
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Closet Indexing pairwise
 # ─────────────────────────────────────────────────────────────────────────────
 

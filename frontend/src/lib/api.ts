@@ -10,14 +10,42 @@ export interface FundSummary {
   category?: string;
 }
 
+export interface ClosetIndexHolding {
+  Resolved_Name: string;
+  holding_ric: string;
+  Clean_Weight_fnd: number;
+  Clean_Weight_bmk: number;
+  Shared_Weight: number;
+}
+
 export interface ClosetIndexResponse {
   fund_name: string;
   bmk_name: string;
   overlap_pct: number;
   active_share_pct: number;
   official_ter: number;
+  ter_benchmark?: number;
   active_ter: number;
   is_closet_indexer: boolean;
+  top_overlaps?: ClosetIndexHolding[];
+}
+
+export interface BenchmarkItem {
+  isin: string;
+  name: string;
+  market: string;
+  region: string;
+  ter: number;
+  is_default: boolean;
+}
+
+export interface BenchmarkRecommendationResponse {
+  fund_isin: string;
+  fund_name: string;
+  category: string;
+  detected_region: string;
+  recommended_benchmark: BenchmarkItem;
+  reason: string;
 }
 
 export interface SharedHolding {
@@ -371,3 +399,17 @@ export async function optimizeFund(
   }
   return res.json();
 }
+
+export async function fetchBenchmarksCatalog(): Promise<BenchmarkItem[]> {
+  const res = await fetch(`${API_BASE}/analytics/benchmarks`);
+  if (!res.ok) throw new Error("Error obtenint el catàleg de benchmarks");
+  const data = await res.json();
+  return data.benchmarks;
+}
+
+export async function fetchBenchmarkRecommendation(fund: string): Promise<BenchmarkRecommendationResponse> {
+  const res = await fetch(`${API_BASE}/analytics/benchmark-recommendation?fund=${encodeURIComponent(fund)}`);
+  if (!res.ok) throw new Error("Error obtenint la recomanació de benchmark");
+  return res.json();
+}
+

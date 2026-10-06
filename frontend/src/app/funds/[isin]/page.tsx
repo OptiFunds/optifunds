@@ -238,16 +238,26 @@ export default function FundDetailPage() {
               </div>
             )}
 
-            <a
-              href={getFundAuditPdfUrl(profile.isin)}
-              target="_blank"
-              rel="noopener noreferrer"
-              download
-              className="mt-3 inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-2xs transition-colors"
-            >
-              <Download className="w-3.5 h-3.5 text-[#00B050]" />
-              <span>Descarregar Dictamen PDF</span>
-            </a>
+            <div className="flex flex-col gap-2 mt-3">
+              <Link
+                href={`/optimize?fund=${profile.isin}`}
+                className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-[#00B050] hover:bg-[#009945] text-white text-xs font-semibold shadow-2xs transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-100" />
+                <span>Optimitzar amb Smart Switch</span>
+              </Link>
+
+              <a
+                href={getFundAuditPdfUrl(profile.isin)}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-2xs transition-colors"
+              >
+                <Download className="w-3.5 h-3.5 text-[#00B050]" />
+                <span>Descarregar Dictamen PDF</span>
+              </a>
+            </div>
           </div>
         </div>
 
