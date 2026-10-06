@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { optimizeFund, searchFunds, OptimizeResult, FundSummary } from "@/lib/api";
-import { Search, Sparkles, ShieldCheck, AlertCircle } from "lucide-react";
+import { Search, Sparkles, ShieldCheck, AlertCircle, Info, CheckCircle2 } from "lucide-react";
 
-export default function OptimizePage() {
-  const [query, setQuery] = useState("ES0159259011");
+function OptimizeContent() {
+  const searchParams = useSearchParams();
+  const initialFund = searchParams.get("fund") || "ES0114388038"; // Default: Kutxabank Bolsa Estandar
+
+  const [query, setQuery] = useState(initialFund);
   const [searchTerm, setSearchTerm] = useState("");
   const [suggestions, setSuggestions] = useState<FundSummary[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -16,6 +20,13 @@ export default function OptimizePage() {
   const [error, setError] = useState<string | null>(null);
   
   const searchRef = useRef<HTMLDivElement>(null);
+
+  // Cerca automàtica inicial en carregar la pàgina
+  useEffect(() => {
+    if (initialFund) {
+      handleSearch(initialFund, minOverlap);
+    }
+  }, [initialFund]);
 
   // Autocompletat: cercar fons mentre l'usuari escriu
   useEffect(() => {
@@ -31,7 +42,7 @@ export default function OptimizePage() {
         setSuggestions([]);
         setShowSuggestions(false);
       }
-    }, 300); // Debounce de 300ms
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -47,16 +58,17 @@ export default function OptimizePage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSearch = async (targetQuery?: string, e?: React.FormEvent) => {
+  const handleSearch = async (targetQuery?: string, targetOverlap?: number, e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const q = targetQuery || query;
+    const ov = targetOverlap !== undefined ? targetOverlap : minOverlap;
     if (!q.trim()) return;
 
     setLoading(true);
     setError(null);
     setShowSuggestions(false);
     try {
-      const data = await optimizeFund(q.trim(), minOverlap);
+      const data = await optimizeFund(q.trim(), ov);
       setResult(data);
     } catch (err: any) {
       setError(err.message || "Error en cercar alternatives");
@@ -91,12 +103,12 @@ export default function OptimizePage() {
           </span>
         </div>
         <p className="text-xs text-slate-500 max-w-xl">
-          Introdueix l'ISIN o nom d'un vehicle de gestió activa per localitzar automàticament indexats o ETFs equivalents amb menors comissions.
+          Introdueix l'ISIN o nom d'un vehicle de gestió activa per localitzar automàticament indexats o ETFs equivalents amb menors comissions basats en el solapament real de cartera.
         </p>
       </div>
 
       {/* Formulari de Cerca amb Autocompletat */}
-      <form onSubmit={(e) => handleSearch(query, e)} className="grid grid-cols-1 md:grid-cols-[1fr,200px,auto] gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm items-end">
+      <form onSubmit={(e) => handleSearch(query, minOverlap, e)} className="grid grid-cols-1 md:grid-cols-[1fr,200px,auto] gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm items-end">
         <div className="relative" ref={searchRef}>
           <label className="block text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-2">
             ISIN o Nom del Fons Comercial
@@ -112,7 +124,7 @@ export default function OptimizePage() {
               onFocus={() => {
                 if (searchTerm.length >= 2) setShowSuggestions(true);
               }}
-              placeholder="Ex: iShares, Vanguard o ISIN..."
+              placeholder="Ex: Kutxabank Bolsa, Santander, BBVA..."
               className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 pl-9 focus:outline-none focus:border-emerald-500"
             />
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -127,7 +139,7 @@ export default function OptimizePage() {
                   onClick={() => {
                     setQuery(item.isin);
                     setShowSuggestions(false);
-                    handleSearch(item.isin);
+                    handleSearch(item.isin, minOverlap);
                   }}
                   className="px-4 py-2.5 hover:bg-emerald-50 cursor-pointer transition-colors flex justify-between items-center"
                 >
@@ -154,7 +166,11 @@ export default function OptimizePage() {
             max="80"
             step="5"
             value={minOverlap}
-            onChange={(e) => setMinOverlap(Number(e.target.value))}
+            onChange={(e) => {
+              const val = Number(e.target.value);
+              setMinOverlap(val);
+              handleSearch(query, val);
+            }}
             className="w-full accent-emerald-600 cursor-pointer"
           />
         </div>
@@ -197,6 +213,21 @@ export default function OptimizePage() {
             </div>
           </div>
 
+          {/* Missatge informatiu o Fallback */}
+          {result.message && (
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p>{result.message}</p>
+            </div>
+          )}
+
+          {result.status === "already_optimal" && (
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <p>Vehicle ja optimitzat. Aquest fons té una de les comissions més baixes del mercat per a la seva categoria.</p>
+            </div>
+          )}
+
           {bestAlt && (
             <>
               {/* Sentència d'impacte */}
@@ -205,7 +236,11 @@ export default function OptimizePage() {
                   <ShieldCheck className="w-4 h-4 text-emerald-600" /> Alternativa Òptima Detectada
                 </p>
                 <p>
-                  El fons <strong>{bestAlt.cand_name}</strong> ({bestAlt.cand_isin}) és un <strong>{bestAlt.overlap.toFixed(1)}% idèntic</strong> en composició i t'estalvia un <strong>{bestAlt.ter_savings.toFixed(2)}% anual</strong> en comissions de gestió.
+                  El vehicle <strong>{bestAlt.cand_name}</strong> ({bestAlt.cand_isin}) {bestAlt.overlap > 0 ? (
+                    <>és un <strong>{bestAlt.overlap.toFixed(1)}% idèntic</strong> en composició de cartera</>
+                  ) : (
+                    <>pertany a la mateixa categoria i perfil d&apos;actius</>
+                  )} i t&apos;estalvia un <strong>{bestAlt.ter_savings.toFixed(2)}% anual</strong> en comissions de gestió.
                 </p>
               </div>
 
@@ -236,7 +271,7 @@ export default function OptimizePage() {
                     <p className="text-xl font-mono text-slate-700 mt-1">{Math.round(capSrc).toLocaleString()} €</p>
                   </div>
                   <div>
-                    <span className="text-[10px] font-mono uppercase text-slate-400">Capital amb l'Alternativa</span>
+                    <span className="text-[10px] font-mono uppercase text-slate-400">Capital amb l&apos;Alternativa</span>
                     <p className="text-xl font-mono text-emerald-600 font-semibold mt-1">{Math.round(capAlt).toLocaleString()} €</p>
                   </div>
                   <div>
@@ -271,7 +306,9 @@ export default function OptimizePage() {
                             <p className="font-medium text-slate-900">{alt.cand_name}</p>
                             <span className="text-[10px] font-mono text-slate-400">{alt.cand_isin}</span>
                           </td>
-                          <td className="py-3 px-4 text-right font-mono text-emerald-600 font-semibold">{alt.overlap.toFixed(1)}%</td>
+                          <td className="py-3 px-4 text-right font-mono text-emerald-600 font-semibold">
+                            {alt.overlap > 0 ? `${alt.overlap.toFixed(1)}%` : "0.0% (Cat)"}
+                          </td>
                           <td className="py-3 px-4 text-right font-mono text-slate-700">{alt.cand_ter.toFixed(2)}%</td>
                           <td className="py-3 px-4 text-right font-mono text-emerald-600 font-medium">-{alt.ter_savings.toFixed(2)}%</td>
                           <td className="py-3 px-4 text-right font-mono text-slate-600">
@@ -288,5 +325,13 @@ export default function OptimizePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function OptimizePage() {
+  return (
+    <Suspense fallback={<div className="p-10 text-xs text-slate-400">Carregant Smart Switch...</div>}>
+      <OptimizeContent />
+    </Suspense>
   );
 }

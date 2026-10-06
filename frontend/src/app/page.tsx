@@ -403,7 +403,7 @@ export default function HomePage() {
 
             {/* Targeta 2 (Mitjana Dalt) */}
             <Link
-              href="/funds/ES0175224031"
+              href="/optimize"
               className="col-span-1 row-span-1 bg-[#00B050] rounded-2xl p-6 flex flex-col justify-between group cursor-pointer hover:bg-[#009945] transition-colors block"
             >
               <p className="text-emerald-50 text-[13px] leading-relaxed pr-4 font-medium">
