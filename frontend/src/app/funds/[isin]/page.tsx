@@ -11,7 +11,8 @@ import {
   ShieldCheck, 
   AlertTriangle, 
   Sparkles,
-  Download
+  Download,
+  Layers
 } from "lucide-react";
 import { getFundDeepDive, searchFunds, getFundAuditPdfUrl, FundDeepDive, FundSummary } from "@/lib/api";
 
@@ -222,16 +223,27 @@ export default function FundDetailPage() {
                 <span>Optimitzar amb Smart Switch</span>
               </Link>
 
-              <a
-                href={getFundAuditPdfUrl(profile.isin)}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
-                className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-2xs transition-colors"
-              >
-                <Download className="w-3.5 h-3.5 text-[#00B050]" />
-                <span>Descarregar Dictamen PDF</span>
-              </a>
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  href={`/portfolio?add=${encodeURIComponent(profile.isin)}&name=${encodeURIComponent(profile.name || profile.fund_name)}`}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-colors"
+                  title="Afegir aquest fons a la teva cartera del Portfolio Builder"
+                >
+                  <Layers className="w-3.5 h-3.5 text-slate-600" />
+                  <span>+ A Cartera</span>
+                </Link>
+
+                <a
+                  href={getFundAuditPdfUrl(profile.isin)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-2xs transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5 text-[#00B050]" />
+                  <span>Dictamen PDF</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>

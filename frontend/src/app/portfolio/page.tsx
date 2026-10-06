@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { 
   PieChart, 
   TrendingUp, 
@@ -12,23 +13,87 @@ import {
   Activity, 
   RefreshCw, 
   Globe2,
-  ArrowRight
+  ArrowRight,
+  Plus,
+  Search,
+  Scale,
+  RotateCcw,
+  CheckCircle2,
+  Percent,
+  AlertCircle
 } from "lucide-react";
-import { fetchPortfolioMPT, fetchPortfolioLookthrough, MPTResponse } from "@/lib/api";
+import { 
+  fetchPortfolioMPT, 
+  fetchPortfolioLookthrough, 
+  searchFunds, 
+  MPTResponse, 
+  FundSummary 
+} from "@/lib/api";
 
 const Chart = dynamic(() => import("@/components/Chart"), { ssr: false });
 
-interface PortfolioItem {
+export interface PortfolioItem {
   id: string;
   name: string;
   weight: number;
+  ter?: number;
 }
 
-const DEFAULT_PORTFOLIO: PortfolioItem[] = [
-  { id: "LP60078536", name: "Vanguard Global Stock Index", weight: 50 },
-  { id: "LP68227672", name: "Fundsmith Equity Fund", weight: 30 },
-  { id: "LP68294156", name: "Magallanes European Equity", weight: 20 },
+interface PortfolioPreset {
+  id: string;
+  name: string;
+  badge: string;
+  description: string;
+  items: PortfolioItem[];
+}
+
+const PRESET_PORTFOLIOS: PortfolioPreset[] = [
+  {
+    id: "indexada",
+    name: "100% Indexada Global",
+    badge: "TER ~0.15%",
+    description: "Rèplica passiva de màxima diversificació mundial amb mínim cost.",
+    items: [
+      { id: "IE00B03HD191", name: "Vanguard Global Stock Index", weight: 50, ter: 0.18 },
+      { id: "IE00B5BMR087", name: "iShares Core S&P 500 UCITS ETF", weight: 30, ter: 0.07 },
+      { id: "LU0996182563", name: "Amundi Index MSCI World", weight: 20, ter: 0.30 },
+    ],
+  },
+  {
+    id: "equilibrada",
+    name: "Equilibrada 60/40 Institucional",
+    badge: "TER ~0.55%",
+    description: "Cartera clàssica de creixement i estabilitat amb gestió d'autor.",
+    items: [
+      { id: "LP60078536", name: "Vanguard Global Stock Index", weight: 50, ter: 0.18 },
+      { id: "LP68227672", name: "Fundsmith Equity Fund", weight: 30, ter: 1.05 },
+      { id: "LP68294156", name: "Magallanes European Equity", weight: 20, ter: 1.85 },
+    ],
+  },
+  {
+    id: "bancaria",
+    name: "Bancària Comercial Espanyola",
+    badge: "TER ~1.73%",
+    description: "Cartera típica comercial venuda per oficines bancàries.",
+    items: [
+      { id: "ES0114388038", name: "Kutxabank Bolsa Estandar FI", weight: 40, ter: 1.85 },
+      { id: "ES0175224031", name: "Santander Acciones Españolas FI", weight: 35, ter: 1.70 },
+      { id: "ES0114638036", name: "BBVA Bolsa FI", weight: 25, ter: 1.65 },
+    ],
+  },
+  {
+    id: "value",
+    name: "Value & Qualitat d'Autor",
+    badge: "TER ~1.82%",
+    description: "Gestió activa pura d'alta convicció i màxim Active Share.",
+    items: [
+      { id: "ES0159259011", name: "Magallanes European Equity M FI", weight: 50, ter: 1.85 },
+      { id: "ES0165144004", name: "Azvalor Internacional FI", weight: 50, ter: 1.80 },
+    ],
+  },
 ];
+
+const DEFAULT_PORTFOLIO: PortfolioItem[] = PRESET_PORTFOLIOS[1].items;
 
 // Matriu densa de punts cartogràfics del món [x, y, regió]
 const WORLD_DOTS: [number, number, string][] = [
@@ -39,54 +104,47 @@ const WORLD_DOTS: [number, number, string][] = [
   [120, 130, "na"], [140, 125, "na"], [160, 120, "na"], [180, 115, "na"], [200, 110, "na"], [220, 110, "na"], [240, 115, "na"], [260, 120, "na"], [280, 125, "na"],
   [140, 150, "na"], [160, 145, "na"], [180, 140, "na"], [200, 135, "na"], [220, 130, "na"], [240, 130, "na"], [260, 135, "na"], [280, 140, "na"],
   [160, 170, "na"], [180, 165, "na"], [200, 160, "na"], [220, 155, "na"], [240, 150, "na"], [260, 150, "na"],
-  [180, 190, "na"], [200, 185, "na"], [220, 180, "na"], [240, 175, "na"],
-  [190, 210, "na"], [210, 205, "na"], [230, 200, "na"],
-  [200, 230, "na"], [215, 240, "na"],
+  [170, 190, "na"], [190, 185, "na"], [210, 180, "na"], [230, 175, "na"], [250, 170, "na"],
+  [180, 210, "na"], [200, 205, "na"], [220, 200, "na"], [240, 195, "na"],
+  [190, 230, "na"], [210, 225, "na"], [230, 220, "na"],
 
-  // Amèrica Central & Llatina
-  [230, 255, "latam"], [245, 270, "latam"], [260, 285, "latam"],
-  [270, 300, "latam"], [285, 305, "latam"], [300, 310, "latam"], [315, 315, "latam"], [330, 320, "latam"],
-  [260, 320, "latam"], [280, 325, "latam"], [300, 330, "latam"], [320, 335, "latam"], [340, 340, "latam"],
-  [260, 345, "latam"], [280, 350, "latam"], [300, 355, "latam"], [320, 360, "latam"], [335, 365, "latam"],
-  [265, 370, "latam"], [280, 375, "latam"], [300, 380, "latam"], [315, 385, "latam"],
-  [270, 395, "latam"], [285, 400, "latam"], [300, 405, "latam"],
-  [275, 420, "latam"], [285, 430, "latam"], [290, 445, "latam"],
+  // Amèrica del Sud
+  [260, 260, "latam"], [280, 265, "latam"],
+  [270, 285, "latam"], [290, 280, "latam"], [310, 285, "latam"],
+  [280, 310, "latam"], [300, 305, "latam"], [320, 300, "latam"], [340, 310, "latam"],
+  [290, 335, "latam"], [310, 330, "latam"], [330, 325, "latam"], [350, 335, "latam"],
+  [295, 360, "latam"], [315, 355, "latam"], [335, 350, "latam"],
+  [300, 385, "latam"], [320, 380, "latam"], [330, 380, "latam"],
+  [305, 410, "latam"], [315, 410, "latam"],
+  [310, 435, "latam"],
 
   // Regne Unit & Irlanda
-  [445, 120, "uk"], [455, 115, "uk"], [445, 135, "uk"], [455, 130, "uk"],
+  [430, 95, "uk"], [435, 105, "uk"], [440, 115, "uk"],
 
-  // Europa Continental & Nòrdics
-  [470, 80, "eu"], [490, 75, "eu"], [510, 80, "eu"],
-  [470, 100, "eu"], [485, 95, "eu"], [500, 95, "eu"], [520, 100, "eu"],
-  [465, 120, "eu"], [480, 115, "eu"], [495, 115, "eu"], [510, 120, "eu"], [525, 125, "eu"], [540, 125, "eu"],
-  [460, 140, "eu"], [475, 135, "eu"], [490, 135, "eu"], [505, 140, "eu"], [520, 145, "eu"], [535, 145, "eu"], [550, 140, "eu"],
-  [450, 160, "eu"], [465, 155, "eu"], [480, 155, "eu"], [495, 160, "eu"], [510, 165, "eu"], [525, 165, "eu"], [540, 160, "eu"],
-  [455, 175, "eu"], [470, 175, "eu"], [485, 180, "eu"], [500, 180, "eu"], [515, 185, "eu"], [530, 180, "eu"],
+  // Europa (Zona Euro & Nòrdics)
+  [460, 75, "eu"], [480, 70, "eu"], [500, 65, "eu"],
+  [455, 95, "eu"], [475, 90, "eu"], [495, 85, "eu"], [515, 80, "eu"],
+  [450, 120, "eu"], [470, 115, "eu"], [490, 110, "eu"], [510, 105, "eu"], [530, 100, "eu"],
+  [440, 140, "eu"], [460, 135, "eu"], [480, 130, "eu"], [500, 125, "eu"], [520, 120, "eu"], [540, 125, "eu"],
+  [430, 160, "eu"], [450, 155, "eu"], [470, 150, "eu"], [490, 145, "eu"], [510, 145, "eu"],
 
   // Àfrica
-  [475, 205, "other"], [495, 205, "other"], [515, 210, "other"], [535, 210, "other"], [555, 215, "other"],
-  [465, 225, "other"], [485, 225, "other"], [505, 230, "other"], [525, 230, "other"], [545, 235, "other"], [565, 235, "other"],
-  [460, 245, "other"], [480, 245, "other"], [500, 250, "other"], [520, 250, "other"], [540, 255, "other"], [560, 255, "other"],
-  [475, 270, "other"], [495, 270, "other"], [515, 275, "other"], [535, 275, "other"], [555, 280, "other"],
-  [490, 295, "other"], [510, 295, "other"], [530, 300, "other"], [550, 300, "other"],
-  [500, 320, "other"], [520, 320, "other"], [540, 325, "other"],
-  [510, 345, "other"], [530, 345, "other"],
-  [520, 370, "other"],
+  [445, 190, "other"], [465, 185, "other"], [485, 180, "other"], [515, 180, "other"], [535, 185, "other"],
+  [440, 215, "other"], [460, 210, "other"], [480, 205, "other"], [500, 205, "other"], [525, 210, "other"], [545, 215, "other"],
+  [455, 240, "other"], [475, 235, "other"], [495, 235, "other"], [515, 240, "other"], [535, 245, "other"],
+  [470, 265, "other"], [490, 265, "other"], [510, 270, "other"], [530, 275, "other"],
+  [480, 295, "other"], [500, 295, "other"], [520, 300, "other"],
+  [490, 325, "other"], [510, 325, "other"],
+  [500, 355, "other"],
 
-  // Orient Mitjà & Àsia Continental
-  [575, 140, "asia"], [595, 135, "asia"], [615, 130, "asia"], [635, 130, "asia"], [655, 135, "asia"], [675, 135, "asia"], [695, 130, "asia"], [715, 125, "asia"], [735, 120, "asia"],
-  [565, 160, "asia"], [585, 155, "asia"], [605, 150, "asia"], [625, 150, "asia"], [645, 155, "asia"], [665, 155, "asia"], [685, 150, "asia"], [705, 145, "asia"], [725, 140, "asia"], [745, 145, "asia"], [765, 150, "asia"],
-  [580, 180, "asia"], [600, 175, "asia"], [620, 175, "asia"], [640, 180, "asia"], [660, 180, "asia"], [680, 175, "asia"], [700, 170, "asia"], [720, 165, "asia"], [740, 165, "asia"], [760, 170, "asia"], [780, 175, "asia"],
-  [610, 200, "asia"], [630, 195, "asia"], [650, 195, "asia"], [670, 200, "asia"], [690, 200, "asia"], [710, 195, "asia"], [730, 190, "asia"], [750, 190, "asia"], [770, 195, "asia"],
-  [640, 220, "asia"], [660, 215, "asia"], [680, 215, "asia"], [700, 220, "asia"], [720, 220, "asia"], [740, 215, "asia"], [760, 215, "asia"],
-  [660, 240, "asia"], [680, 240, "asia"], [700, 245, "asia"], [720, 245, "asia"], [740, 240, "asia"],
-  [680, 265, "asia"], [700, 270, "asia"], [730, 265, "asia"], [750, 270, "asia"],
-
-  // Japó & Corea
-  [805, 160, "asia"], [815, 155, "asia"], [825, 150, "asia"], [815, 175, "asia"], [825, 170, "asia"], [835, 165, "asia"],
-
-  // Sud-est Asiàtic
-  [750, 295, "asia"], [770, 305, "asia"], [790, 315, "asia"], [810, 325, "asia"],
+  // Àsia & Japó
+  [570, 85, "asia"], [590, 80, "asia"], [610, 75, "asia"], [630, 70, "asia"], [660, 70, "asia"], [690, 75, "asia"],
+  [560, 110, "asia"], [580, 105, "asia"], [600, 100, "asia"], [620, 95, "asia"], [650, 95, "asia"], [680, 100, "asia"], [710, 105, "asia"],
+  [565, 135, "asia"], [585, 130, "asia"], [605, 125, "asia"], [630, 120, "asia"], [660, 120, "asia"], [690, 125, "asia"], [720, 130, "asia"], [740, 125, "asia"],
+  [590, 160, "asia"], [615, 155, "asia"], [640, 150, "asia"], [670, 145, "asia"], [700, 150, "asia"], [730, 155, "asia"], [750, 150, "asia"],
+  [600, 185, "asia"], [625, 180, "asia"], [655, 175, "asia"], [685, 175, "asia"], [715, 180, "asia"], [735, 180, "asia"],
+  [610, 210, "asia"], [635, 205, "asia"], [665, 205, "asia"], [695, 210, "asia"], [720, 215, "asia"],
+  [630, 240, "asia"], [680, 240, "asia"], [705, 245, "asia"], [730, 245, "asia"],
 
   // Oceania & Austràlia
   [780, 355, "other"], [800, 350, "other"], [820, 350, "other"], [840, 355, "other"],
@@ -96,25 +154,87 @@ const WORLD_DOTS: [number, number, string][] = [
   [870, 425, "other"]
 ];
 
-export default function PortfolioBuilderPage() {
+function PortfolioContent() {
+  const searchParams = useSearchParams();
+
   const [items, setItems] = useState<PortfolioItem[]>(DEFAULT_PORTFOLIO);
+  const [activePresetId, setActivePresetId] = useState<string>("equilibrada");
   const [mptData, setMptData] = useState<MPTResponse | null>(null);
   const [lookthroughData, setLookthroughData] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [activeMatrixTab, setActiveMatrixTab] = useState<"corr" | "cov">("corr");
 
+  // Cercador per afegir nous fons a la cartera
+  const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<FundSummary[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [addNotice, setAddNotice] = useState<string | null>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Comprovar si s'ha passat un fons via URL (?add=ISIN&name=Nom)
+  useEffect(() => {
+    const addIsin = searchParams.get("add");
+    const addName = searchParams.get("name");
+    if (addIsin) {
+      addFundToPortfolio({
+        isin: addIsin,
+        fund_name: addName || addIsin,
+        ter: 1.25
+      });
+    }
+  }, [searchParams]);
+
+  // Autocompletat de cerca de fons
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim().length >= 2) {
+        searchFunds(searchQuery.trim())
+          .then((res) => {
+            setSuggestions(res.slice(0, 6));
+            setShowSuggestions(true);
+          })
+          .catch(() => setSuggestions([]));
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Tancar suggeriments en clicar fora
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const totalWeight = useMemo(() => {
     return items.reduce((acc, item) => acc + (Number(item.weight) || 0), 0);
   }, [items]);
 
-  const calculateAll = async () => {
-    if (items.length < 2) {
-      setError("Cal seleccionar un mínim de 2 fons per calcular la teoria de carteres.");
+  // Càlcul del TER mitjà ponderat de la cartera
+  const weightedTer = useMemo(() => {
+    if (items.length === 0) return 0;
+    const sum = items.reduce((acc, it) => acc + (it.weight * (it.ter ?? 1.25)), 0);
+    return totalWeight > 0 ? sum / totalWeight : 0;
+  }, [items, totalWeight]);
+
+  const calculateAll = async (targetItems?: PortfolioItem[]) => {
+    const listToCalc = targetItems || items;
+    if (listToCalc.length < 2) {
+      setError("Cal tenir com a mínim 2 fons per calcular la teoria de carteres.");
       return;
     }
-    if (Math.abs(totalWeight - 100) > 0.5) {
-      setError(`La suma de pesos ha de ser del 100% (actualment ${totalWeight}%).`);
+    const sum = listToCalc.reduce((acc, it) => acc + (Number(it.weight) || 0), 0);
+    if (Math.abs(sum - 100) > 0.5) {
+      setError(`La suma de pesos ha de ser del 100% (actualment ${sum}%). Prem 'Equiponderar' per ajustar-ho.`);
       return;
     }
 
@@ -122,15 +242,30 @@ export default function PortfolioBuilderPage() {
     setError(null);
 
     const allocations: Record<string, number> = {};
-    items.forEach((it) => { allocations[it.id] = Number(it.weight); });
+    listToCalc.forEach((it) => { allocations[it.id] = Number(it.weight); });
 
     try {
-      const [mptRes, ltRes] = await Promise.all([
+      // Fem servir allSettled per robustesa màxima: si MPT manca d'històric per 1 fons, el Lookthrough (mapa, sectors, holdings) no es trenca!
+      const [mptRes, ltRes] = await Promise.allSettled([
         fetchPortfolioMPT(allocations),
         fetchPortfolioLookthrough(allocations)
       ]);
-      setMptData(mptRes);
-      setLookthroughData(ltRes);
+
+      if (mptRes.status === "fulfilled") {
+        setMptData(mptRes.value);
+      } else {
+        console.warn("MPT error:", mptRes.reason);
+      }
+
+      if (ltRes.status === "fulfilled") {
+        setLookthroughData(ltRes.value);
+      } else {
+        console.warn("Lookthrough error:", ltRes.reason);
+      }
+
+      if (mptRes.status === "rejected" && ltRes.status === "rejected") {
+        setError("No s'han pogut calcular les mètriques d'aquests vehicles a la base de dades.");
+      }
     } catch (err: any) {
       setError(err.message || "Error al connectar amb el motor quantitatiu.");
     } finally {
@@ -149,8 +284,62 @@ export default function PortfolioBuilderPage() {
   };
 
   const removeFund = (index: number) => {
-    if (items.length <= 2) return;
-    setItems(items.filter((_, i) => i !== index));
+    if (items.length <= 2) {
+      setAddNotice("La cartera requereix un mínim de 2 instruments per calcular l'eficiència de Markowitz.");
+      setTimeout(() => setAddNotice(null), 3000);
+      return;
+    }
+    const updated = items.filter((_, i) => i !== index);
+    setItems(updated);
+    setActivePresetId("personalitzada");
+  };
+
+  // Funció per afegir un nou fons
+  const addFundToPortfolio = (fund: FundSummary) => {
+    if (items.some((it) => it.id === fund.isin)) {
+      setAddNotice(`El fons ${fund.fund_name} (${fund.isin}) ja forma part de la cartera.`);
+      setTimeout(() => setAddNotice(null), 3500);
+      return;
+    }
+
+    const newWeight = Math.max(5, Math.min(25, 100 - totalWeight));
+    const newItem: PortfolioItem = {
+      id: fund.isin,
+      name: fund.fund_name,
+      weight: newWeight,
+      ter: fund.ter ?? 1.25,
+    };
+
+    const nextItems = [...items, newItem];
+    setItems(nextItems);
+    setSearchQuery("");
+    setShowSuggestions(false);
+    setActivePresetId("personalitzada");
+
+    setAddNotice(`Afegit a la cartera: ${fund.fund_name}`);
+    setTimeout(() => setAddNotice(null), 3500);
+  };
+
+  // Funció per equiponderar a parts iguals (100% / N)
+  const equiponderate = () => {
+    if (items.length === 0) return;
+    const base = Math.floor(100 / items.length);
+    const remainder = 100 - base * items.length;
+    const updated = items.map((it, idx) => ({
+      ...it,
+      weight: idx === 0 ? base + remainder : base,
+    }));
+    setItems(updated);
+    setError(null);
+    calculateAll(updated);
+  };
+
+  // Carregar plantilla de cartera
+  const applyPreset = (preset: PortfolioPreset) => {
+    setItems(preset.items);
+    setActivePresetId(preset.id);
+    setError(null);
+    calculateAll(preset.items);
   };
 
   const regionsList = useMemo<{ name: string; value: number }[]>(() => {
@@ -197,18 +386,18 @@ export default function PortfolioBuilderPage() {
     else if (regionKey === "latam") pct = latamPct;
 
     if (pct <= 0) {
-      return { fill: "#E2E8F0", radius: 2.2, opacity: 0.6 }; // Gris de fons suau
+      return { fill: "#E2E8F0", radius: 2.2, opacity: 0.6 };
     }
     if (pct >= 50) {
-      return { fill: "#00B050", radius: 4.2, opacity: 1.0 }; // Verd corporatiu vibrant
+      return { fill: "#00B050", radius: 4.2, opacity: 1.0 };
     }
     if (pct >= 20) {
-      return { fill: "#059669", radius: 3.5, opacity: 0.9 }; // Verd maragda
+      return { fill: "#059669", radius: 3.5, opacity: 0.9 };
     }
-    return { fill: "#10B981", radius: 3.0, opacity: 0.8 };   // Verd clar
+    return { fill: "#10B981", radius: 3.0, opacity: 0.8 };
   };
 
-  // Gràfic Sectorial AMB BARRES ENCARA MÉS AMPLES (32px de gruix)
+  // Gràfic Sectorial
   const sectorChartOptions = useMemo(() => {
     if (sectorsList.length === 0) return {};
     const reversed = [...sectorsList].reverse();
@@ -218,31 +407,32 @@ export default function PortfolioBuilderPage() {
         axisPointer: { type: "shadow" },
         backgroundColor: "#0F172A",
         borderColor: "#1E293B",
-        textStyle: { color: "#F8FAFC", fontSize: 12, fontFamily: "monospace" },
-        formatter: (params: any) => `<b>${params[0].name}</b>: ${params[0].value}% de la cartera`,
+        textStyle: { color: "#F8FAFC", fontSize: 11, fontFamily: "monospace" },
+        formatter: (params: any) => `${params[0]?.name}: <b>${params[0]?.value}%</b>`,
       },
-      grid: { top: "4%", right: "16%", bottom: "4%", left: "32%", containLabel: false },
+      grid: { top: "4%", right: "12%", bottom: "4%", left: "30%", containLabel: true },
       xAxis: {
         type: "value",
-        axisLabel: { color: "#64748B", fontSize: 11, fontFamily: "monospace" },
+        axisLine: { show: false },
         splitLine: { lineStyle: { color: "#F1F5F9", type: "dashed" } },
+        axisLabel: { color: "#64748B", fontSize: 10, fontFamily: "monospace" },
       },
       yAxis: {
         type: "category",
         data: reversed.map((s) => s.name),
-        axisLabel: { color: "#0F172A", fontSize: 13, fontWeight: 700 },
-        axisLine: { show: false },
+        axisLine: { lineStyle: { color: "#E2E8F0" } },
         axisTick: { show: false },
+        axisLabel: { color: "#1E293B", fontSize: 11, fontWeight: 700 },
       },
       series: [
         {
           type: "bar",
           data: reversed.map((s) => s.value),
           itemStyle: { 
-            color: "#00B050", // Verd corporatiu pur OptiFunds
+            color: "#00B050",
             borderRadius: [0, 8, 8, 0] 
           },
-          barWidth: 32, // BARRES EXTRA AMPLES (MÀXIM IMPACTE)
+          barWidth: 32,
           label: {
             show: true,
             position: "right",
@@ -318,53 +508,50 @@ export default function PortfolioBuilderPage() {
           data: [[
             mptData.user_portfolio.volatility_annual_pct,
             mptData.user_portfolio.return_annual_pct,
-            mptData.user_portfolio.sharpe_ratio
+            mptData.user_portfolio.sharpe_ratio,
           ]],
-          z: 10,
         },
         {
           name: "Màxim Sharpe",
           type: "scatter",
-          symbol: "diamond",
           symbolSize: 16,
           itemStyle: { color: "#00B050", borderColor: "#FFFFFF", borderWidth: 2 },
           data: [[
             mptData.max_sharpe_portfolio.volatility_annual_pct,
             mptData.max_sharpe_portfolio.return_annual_pct,
-            mptData.max_sharpe_portfolio.sharpe_ratio
+            mptData.max_sharpe_portfolio.sharpe_ratio,
           ]],
-          z: 10,
         },
         {
           name: "Mínima Volatilitat",
           type: "scatter",
-          symbol: "triangle",
-          symbolSize: 15,
+          symbolSize: 14,
           itemStyle: { color: "#D97706", borderColor: "#FFFFFF", borderWidth: 2 },
           data: [[
             mptData.min_volatility_portfolio.volatility_annual_pct,
             mptData.min_volatility_portfolio.return_annual_pct,
-            mptData.min_volatility_portfolio.sharpe_ratio
+            mptData.min_volatility_portfolio.sharpe_ratio,
           ]],
-          z: 10,
         },
       ],
     };
   }, [mptData]);
 
-  // Gràfic Matriu Correlació / Covariància
+  // Matriu de Correlació / Covariància
   const matrixChartOptions = useMemo(() => {
     if (!mptData) return {};
     const isCorr = activeMatrixTab === "corr";
-    const sourceMatrix = isCorr ? mptData.correlations : mptData.covariances_annual;
-    if (!sourceMatrix) return {};
+    const matrix = isCorr ? mptData.correlations : mptData.covariances_annual;
+    if (!matrix) return {};
 
-    const tickers = Object.keys(sourceMatrix);
+    const tickers = Object.keys(matrix);
     const dataPoints: [number, number, number][] = [];
-
-    tickers.forEach((t1, i) => {
-      tickers.forEach((t2, j) => {
-        dataPoints.push([i, j, sourceMatrix[t1]?.[t2] ?? 0]);
+    tickers.forEach((t1: string, i: number) => {
+      tickers.forEach((t2: string, j: number) => {
+        let val = matrix[t1]?.[t2] ?? 0;
+        if (!isCorr) val = Number((val * 10000).toFixed(1));
+        else val = Number(val.toFixed(2));
+        dataPoints.push([j, i, val]);
       });
     });
 
@@ -375,8 +562,8 @@ export default function PortfolioBuilderPage() {
         borderColor: "#1E293B",
         textStyle: { color: "#F8FAFC", fontSize: 11, fontFamily: "monospace" },
         formatter: (params: any) => {
-          const t1 = tickers[params.data[0]];
-          const t2 = tickers[params.data[1]];
+          const t1 = tickers[params.data[1]];
+          const t2 = tickers[params.data[0]];
           const val = params.data[2];
           return `<b>${t1} ↔ ${t2}</b><br/>${isCorr ? "Correlació: " : "Covariància (x10k): "}<b>${val}</b>`;
         },
@@ -434,225 +621,389 @@ export default function PortfolioBuilderPage() {
           </p>
         </div>
 
-      {/* Selector de Cartera */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-6 space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
+        {/* BARRA DE PLANTILLES PRECONFIGURADES */}
+        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-3 shadow-2xs">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 text-[#00B050]" />
+              Plantilles de Cartera Recomanades
+            </span>
+            <span className="text-[11px] text-slate-400 font-mono">Carrega estratègies reals en 1 clic</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {PRESET_PORTFOLIOS.map((p) => {
+              const isActive = activePresetId === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => applyPreset(p)}
+                  className={`text-left p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-white border-[#00B050] shadow-sm ring-1 ring-[#00B050]"
+                      : "bg-white/80 border-slate-200/80 hover:border-slate-300 hover:bg-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-xs text-slate-900 truncate">{p.name}</span>
+                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-50 text-[#00B050] border border-emerald-100">
+                      {p.badge}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                    {p.description}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* NOTIFICACIÓ D'AFEGIT O ALERTA */}
+        {addNotice && (
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-center gap-2 animate-in fade-in duration-200">
+            <CheckCircle2 className="w-4 h-4 text-[#00B050] shrink-0" />
+            <span className="font-medium">{addNotice}</span>
+          </div>
+        )}
+
+        {/* SELECTOR I GESTOR DE CARTERA DINÀMIC BENTO */}
+        <div className="bg-white border border-slate-200/90 shadow-2xs rounded-3xl p-6 sm:p-8 space-y-6">
+          
+          {/* HEADER AMB MÈTRIQUES DE CARTERA */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+            <div>
+              <div className="flex items-center gap-2">
+                <PieChart className="w-4 h-4 text-[#00B050]" />
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
+                  Composició i Pesos de la Cartera Actual ({items.length} Fons)
+                </h2>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Ajusta els percentatges, afegeix fons de mercat o rebalanceja a parts iguals
+              </p>
+            </div>
+
+            {/* MÈTRIQUES TOTALS: SUMA I TER PONDERAT */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* TER Ponderat */}
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono">
+                <span className="text-slate-400">TER Ponderat:</span>
+                <span className={`font-bold ${weightedTer < 0.75 ? "text-[#00B050]" : weightedTer < 1.5 ? "text-amber-600" : "text-rose-600"}`}>
+                  {weightedTer.toFixed(2)}%/any
+                </span>
+                <span className="text-slate-400 text-[10px]">({Math.round(weightedTer * 1000)}€/100k€)</span>
+              </div>
+
+              {/* Suma de Pesos */}
+              <span className={`font-mono text-xs font-bold px-3 py-1.5 rounded-xl border ${
+                Math.abs(totalWeight - 100) < 0.1 
+                  ? "bg-emerald-50 text-[#00B050] border-emerald-200" 
+                  : "bg-rose-50 text-rose-600 border-rose-200"
+              }`}>
+                Suma: {totalWeight}% / 100%
+              </span>
+            </div>
+          </div>
+
+          {/* BUSCADOR PER AFEGIR FONS A LA CARTERA */}
+          <div className="relative" ref={searchRef}>
+            <label className="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-2">
+              Afegir Fons de la Base de Dades a la Cartera
+            </label>
+            <div className="relative flex items-center">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Cerca fons o ISIN per afegir (Ex: Vanguard, CaixaBank, Santander, Amundi...)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => {
+                  if (suggestions.length > 0) setShowSuggestions(true);
+                }}
+                className="w-full bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-900 font-medium focus:outline-none focus:border-[#00B050] focus:ring-1 focus:ring-[#00B050] transition-colors shadow-2xs"
+              />
+            </div>
+
+            {/* Desplegable de cerca */}
+            {showSuggestions && suggestions.length > 0 && (
+              <ul className="absolute z-50 left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-64 overflow-y-auto text-xs divide-y divide-slate-100 py-1">
+                {suggestions.map((f) => (
+                  <li
+                    key={f.isin}
+                    onClick={() => addFundToPortfolio(f)}
+                    className="px-4 py-2.5 hover:bg-emerald-50/50 cursor-pointer transition-colors flex justify-between items-center group"
+                  >
+                    <div className="pr-2 truncate">
+                      <p className="font-semibold text-slate-900 group-hover:text-[#00B050] transition-colors truncate">
+                        {f.fund_name}
+                      </p>
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono mt-0.5">
+                        <span>{f.isin}</span>
+                        {f.category && (
+                          <>
+                            <span>•</span>
+                            <span className="text-slate-500">{f.category}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {f.ter !== undefined && (
+                        <span className="font-mono text-[10px] text-slate-700 bg-slate-100 px-2 py-0.5 rounded font-semibold">
+                          TER: {f.ter}%
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#00B050] bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 group-hover:bg-[#00B050] group-hover:text-white transition-colors">
+                        <Plus className="w-3 h-3" />
+                        <span>Afegir</span>
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* TARGETES DELS FONS A LA CARTERA */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {items.map((item, idx) => (
+              <div key={item.id} className="p-4 rounded-2xl border border-slate-200/80 bg-white shadow-2xs space-y-3 group hover:border-[#00B050]/50 transition-colors">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-900 truncate" title={item.name}>{item.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-mono text-slate-400">{item.id}</span>
+                      {item.ter !== undefined && (
+                        <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                          TER: {item.ter}%
+                        </span>
+                      )}
+                      <Link
+                        href={`/optimize?fund=${encodeURIComponent(item.id)}`}
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 transition-colors"
+                        title={`Trobar alternatives indexades per a ${item.name}`}
+                      >
+                        <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
+                        <span>Smart Switch</span>
+                      </Link>
+                    </div>
+                  </div>
+                  {items.length > 2 && (
+                    <button 
+                      onClick={() => removeFund(idx)}
+                      className="text-slate-300 hover:text-rose-500 transition-colors p-1 rounded-lg hover:bg-rose-50"
+                      title="Eliminar de la cartera"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 pt-1">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    step="5"
+                    value={item.weight}
+                    onChange={(e) => updateWeight(idx, Number(e.target.value))}
+                    className="w-full accent-[#00B050] cursor-pointer"
+                  />
+                  <span className="text-xs font-mono font-bold w-12 text-right text-slate-900 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                    {item.weight}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* BOTONS D'ACCIÓ RÀPIDA (EQUIPONDERAR + RECALCULAR) */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-3 border-t border-slate-100">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={equiponderate}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+                title="Repartir el 100% a parts iguals entre tots els fons"
+              >
+                <Scale className="w-3.5 h-3.5 text-slate-500" />
+                <span>Equiponderar Pesos ({Math.round(100 / items.length)}%)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => applyPreset(PRESET_PORTFOLIOS[1])}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-500 hover:text-slate-800 text-xs font-medium hover:bg-slate-50 transition-colors"
+                title="Restablir cartera inicial"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Restablir per defecte</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 ml-auto">
+              {error && <span className="text-xs text-rose-600 font-mono font-medium">{error}</span>}
+              <button
+                onClick={() => calculateAll()}
+                disabled={loading}
+                className="flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white bg-slate-900 rounded-xl hover:bg-[#00B050] transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                <span>{loading ? "Calculant dades..." : "Recalcular Cartera 360°"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* BANNER DE REDUCCIÓ DE COMISSIONS AMB SMART SWITCH */}
+        <div className="bg-gradient-to-r from-emerald-50/70 via-slate-50 to-blue-50/70 border border-emerald-200/80 rounded-3xl p-5 sm:p-6 flex items-center justify-between gap-4 flex-wrap shadow-2xs">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-[#00B050] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-sm font-bold text-slate-900 block">
+                Optimitza les comissions abans de rebalancejar
+              </span>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Reemplaça fons comercials d&apos;alt cost per rèpliques indexades equivalents de màxim solapament a través de l&apos;Smart Switch.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/optimize"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-bold shadow-xs transition-colors shrink-0"
+          >
+            <span>Explorar Smart Switch</span>
+            <ArrowRight className="w-3.5 h-3.5 text-emerald-700" />
+          </Link>
+        </div>
+
+        {/* MÒDUL 1: MAPAMUNDI DE MICRO-PUNTS + BARRES SECTORIALS */}
+        <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <PieChart className="w-4 h-4 text-[#00B050]" />
+            <Globe2 className="w-4 h-4 text-[#00B050]" />
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-900">
-              Pesos de la Cartera Actual
+              1. Desglossament Geogràfic Mundial & Exposició Sectorial
             </h2>
           </div>
-          <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${
-            Math.abs(totalWeight - 100) < 0.1 
-              ? "bg-emerald-50 text-[#00B050] border border-emerald-200" 
-              : "bg-rose-50 text-rose-600 border border-rose-200"
-          }`}>
-            Suma: {totalWeight}% / 100%
-          </span>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {items.map((item, idx) => (
-            <div key={item.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 space-y-2">
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <p className="text-xs font-bold text-slate-900 line-clamp-1">{item.name}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono text-slate-400">{item.id}</span>
-                    <Link
-                      href={`/optimize?fund=${encodeURIComponent(item.id)}`}
-                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 transition-colors"
-                      title={`Trobar alternatives indexades per a ${item.name}`}
-                    >
-                      <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
-                      <span>Smart Switch</span>
-                    </Link>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            {/* MAPAMUNDI A BASE DE MICRO-PUNTS */}
+            <div className="lg:col-span-6 bg-white border border-slate-200/90 shadow-2xs rounded-3xl p-6 sm:p-7 flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                      Mapamundi de Matriu Cartogràfica (Look-Through)
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Projecció de micro-punts: gris per defecte i verd #00B050 per a mercats actius
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500">
+                    <span className="w-2 h-2 rounded-full bg-slate-200 inline-block"></span> 0%
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] inline-block"></span> 20%
+                    <span className="w-3 h-3 rounded-full bg-[#00B050] inline-block"></span> &gt;50%
                   </div>
                 </div>
-                {items.length > 2 && (
-                  <button 
-                    onClick={() => removeFund(idx)}
-                    className="text-slate-300 hover:text-rose-500 transition-colors p-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
 
-              <div className="flex items-center gap-3 pt-2">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  step="5"
-                  value={item.weight}
-                  onChange={(e) => updateWeight(idx, Number(e.target.value))}
-                  className="w-full accent-[#00B050]"
-                />
-                <span className="text-xs font-mono font-bold w-12 text-right text-slate-800">
-                  {item.weight}%
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex justify-between items-center pt-2">
-          {error && <span className="text-xs text-rose-500 font-mono">{error}</span>}
-          <div className="ml-auto">
-            <button
-              onClick={calculateAll}
-              disabled={loading}
-              className="flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-slate-900 rounded-xl hover:bg-[#00B050] transition-colors shadow-sm disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-              <span>{loading ? "Calculant dades..." : "Recalcular Cartera 360°"}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Banner de reducció de comissions amb Smart Switch */}
-      <div className="bg-gradient-to-r from-emerald-50/70 via-slate-50 to-blue-50/70 border border-emerald-200/80 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#00B050] text-white flex items-center justify-center shrink-0 shadow-xs">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="text-xs sm:text-sm font-bold text-slate-900 block">
-              Optimitza les comissions abans de rebalancejar
-            </span>
-            <p className="text-[11px] sm:text-xs text-slate-600 mt-0.5">
-              Reemplaça fons comercials d'alt cost per rèpliques indexades equivalents de màxim solapament a través de l'Smart Switch.
-            </p>
-          </div>
-        </div>
-        <Link
-          href="/optimize"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-bold shadow-xs transition-colors shrink-0"
-        >
-          <span>Explorar Smart Switch</span>
-          <ArrowRight className="w-3.5 h-3.5 text-emerald-700" />
-        </Link>
-      </div>
-
-      {/* MÒDUL 1: MAPAMUNDI DE MICRO-PUNTS + BARRES SECTORIALS EXTRA AMPLES */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Globe2 className="w-4 h-4 text-[#00B050]" />
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-900">
-            1. Desglossament Geogràfic Mundial & Exposició Sectorial
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* MAPAMUNDI A BASE DE MICRO-PUNTS (DOT MATRIX ENGINE) */}
-          <div className="lg:col-span-6 bg-white border border-slate-200 shadow-sm rounded-xl p-6 flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                    Mapamundi de Matriu Cartogràfica (Look-Through)
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    Projecció de micro-punts: gris per defecte i verd #00B050 per a mercats actius
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500">
-                  <span className="w-2 h-2 rounded-full bg-slate-200 inline-block"></span> 0%
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] inline-block"></span> 20%
-                  <span className="w-3 h-3 rounded-full bg-[#00B050] inline-block"></span> &gt;50%
+                {/* Llenç SVG amb micro-punts cartogràfics */}
+                <div className="w-full h-72 bg-slate-50/70 rounded-2xl border border-slate-100 p-3 flex items-center justify-center relative overflow-hidden">
+                  <svg viewBox="0 0 900 480" className="w-full h-full max-h-72 object-contain">
+                    {WORLD_DOTS.map(([cx, cy, reg], idx) => {
+                      const style = getDotStyle(reg);
+                      return (
+                        <circle
+                          key={idx}
+                          cx={cx}
+                          cy={cy}
+                          r={style.radius}
+                          fill={style.fill}
+                          opacity={style.opacity}
+                          className="transition-all duration-300"
+                        />
+                      );
+                    })}
+                  </svg>
                 </div>
               </div>
 
-              {/* Llenç SVG amb micro-punts cartogràfics */}
-              <div className="w-full h-72 bg-slate-50/70 rounded-xl border border-slate-100 p-3 flex items-center justify-center relative overflow-hidden">
-                <svg viewBox="0 0 960 480" className="w-full h-full">
-                  {/* Quadrícula suau de coordenades */}
-                  <line x1="40" y1="240" x2="920" y2="240" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-                  <line x1="480" y1="40" x2="480" y2="440" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-
-                  {/* Renderitzat de cada micro-punt del planeta */}
-                  {WORLD_DOTS.map(([cx, cy, regionKey], idx) => {
-                    const style = getDotStyle(regionKey);
-                    return (
-                      <circle
-                        key={idx}
-                        cx={cx}
-                        cy={cy}
-                        r={style.radius}
-                        fill={style.fill}
-                        opacity={style.opacity}
-                        className="transition-all duration-300 hover:scale-125"
-                      />
-                    );
-                  })}
-                </svg>
+              {/* Distribució geogràfica resumida */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-4 border-t border-slate-100 mt-4 text-center">
+                <div className="p-2.5 bg-slate-50 rounded-xl">
+                  <span className="text-[10px] font-mono uppercase text-slate-400 block">Amèrica Nord</span>
+                  <span className="text-sm font-bold font-mono text-slate-900">{northAmericaPct.toFixed(1)}%</span>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl">
+                  <span className="text-[10px] font-mono uppercase text-slate-400 block">Europa Euro</span>
+                  <span className="text-sm font-bold font-mono text-slate-900">{europePct.toFixed(1)}%</span>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl">
+                  <span className="text-[10px] font-mono uppercase text-slate-400 block">Regne Unit</span>
+                  <span className="text-sm font-bold font-mono text-slate-900">{ukPct.toFixed(1)}%</span>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl">
+                  <span className="text-[10px] font-mono uppercase text-slate-400 block">Àsia / Altres</span>
+                  <span className="text-sm font-bold font-mono text-slate-900">{asiaPct.toFixed(1)}%</span>
+                </div>
               </div>
             </div>
 
-            {/* Pastilles de resum regional inferior */}
-            <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100">
-              {regionsList.slice(0, 3).map((reg, i) => (
-                <div key={i} className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                  <span className="text-[10px] text-slate-400 block font-sans truncate">{reg.name}</span>
-                  <span className="text-sm font-bold font-mono text-slate-900">{reg.value}%</span>
+            {/* BARRES SECTORIALS */}
+            <div className="lg:col-span-6 bg-white border border-slate-200/90 shadow-2xs rounded-3xl p-6 sm:p-7 flex flex-col justify-between">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-1">
+                  Exposició Sectorial Consolidada
+                </h3>
+                <p className="text-[11px] text-slate-400 mb-4">
+                  Pes percentual agregat per indústria econòmica real
+                </p>
+                <div className="w-full h-80">
+                  <Chart option={sectorChartOptions} height="320px" />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* BARRES SECTORIALS DE GRAN FORMAT (GRUIX EXTRA DE 32PX) */}
-          <div className="lg:col-span-6 bg-white border border-slate-200 shadow-sm rounded-xl p-6 flex flex-col justify-between">
-            <div className="mb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                Exposició per Sectors Econòmics (GICS Breakdown)
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                Ponderació directa de negoci de cada companyia subjacent
-              </p>
-            </div>
-            
-            {/* Contenidor de 440px per allotjar barres amples sense compressió */}
-            <div className="w-full">
-              <Chart option={sectorChartOptions} height="440px" />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* TOP 10 ACCIONS CONSOLIDADES */}
+        {/* MÒDUL 2: PRINCIPALS VALORS CONSOLIDATS */}
         {topHoldingsList.length > 0 && (
-          <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-6 space-y-3">
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                Top 10 Títols Finals Consolidats (Agregació Multi-Fons)
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                Accions amb més pes efectiu sumant les posicions de tots els teus fons
-              </p>
+          <div className="bg-white border border-slate-200/90 shadow-2xs rounded-3xl p-6 sm:p-8 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                  Top Valors Consolidats en Cartera (Look-Through)
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Pes efectiu agregat de les primeres companyies a través de tots els fons
+                </p>
+              </div>
+              <span className="text-xs font-mono text-slate-400">{topHoldingsList.length} valors</span>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-[10px] font-mono uppercase text-slate-400">
-                    <th className="py-2.5">Companyia Subjacent</th>
-                    <th className="py-2.5">Sector</th>
-                    <th className="py-2.5">Regió</th>
-                    <th className="py-2.5 text-right">Pes Net a Cartera</th>
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-mono border-b border-slate-200">
+                  <tr>
+                    <th className="py-2.5 px-4">Companyia Subjacent</th>
+                    <th className="py-2.5 px-4 font-mono">RIC</th>
+                    <th className="py-2.5 px-4">Regió</th>
+                    <th className="py-2.5 px-4">Sector</th>
+                    <th className="py-2.5 px-4 text-right">Pes Cartera</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50 text-xs font-mono">
-                  {topHoldingsList.map((h: any, i: number) => (
-                    <tr key={i} className="hover:bg-slate-50/50">
-                      <td className="py-2.5 font-semibold text-slate-800">
-                        {h.holding_name || h.name} {(h.holding_ric || h.ric) && <span className="text-[10px] font-normal text-slate-400">({h.holding_ric || h.ric})</span>}
-                      </td>
-                      <td className="py-2.5 text-slate-600 font-sans text-[11px]">{h.sector || "Altres"}</td>
-                      <td className="py-2.5 text-slate-600 font-sans text-[11px]">{h.region || h.country || "Global"}</td>
-                      <td className="py-2.5 text-right font-bold text-[#00B050]">
-                        {h.portfolio_exposure ?? h.weight ?? 0}%
+                <tbody className="divide-y divide-slate-100">
+                  {topHoldingsList.slice(0, 10).map((h: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-2.5 px-4 font-semibold text-slate-900">{h.holding_name || h.name}</td>
+                      <td className="py-2.5 px-4 font-mono text-slate-400">{h.holding_ric || h.ric || "—"}</td>
+                      <td className="py-2.5 px-4 text-slate-600">{h.region || "Global"}</td>
+                      <td className="py-2.5 px-4 text-slate-600">{h.sector || "Altres"}</td>
+                      <td className="py-2.5 px-4 text-right font-mono font-bold text-[#00B050]">
+                        {Number(h.portfolio_exposure ?? h.weight ?? 0).toFixed(2)}%
                       </td>
                     </tr>
                   ))}
@@ -661,174 +1012,123 @@ export default function PortfolioBuilderPage() {
             </div>
           </div>
         )}
-      </div>
 
-      {/* MÒDUL 2: MÈTRIQUES DE RISC */}
-      {mptData && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-[#00B050]" />
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-900">
-              2. Eficiència de Markowitz & Diagnòstic de Risc
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Retorn Esperat</span>
-                <TrendingUp className="w-4 h-4 text-[#00B050]" />
+        {/* MÒDUL 3: TEORIA MODERNA DE CARTERES DE MARKOWITZ */}
+        {mptData && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            {/* FRONTERA EFICIENT */}
+            <div className="lg:col-span-6 bg-white border border-slate-200/90 shadow-2xs rounded-3xl p-6 sm:p-7 space-y-4">
+              <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                    Frontera Eficient & Simulació Monte Carlo
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Maximitza el Sharpe Ratio i redueix la volatilitat agregada
+                  </p>
+                </div>
               </div>
-              <p className="text-2xl font-bold font-mono text-slate-900 mt-1">
-                +{mptData.user_portfolio.return_annual_pct}%
+              <Chart option={frontierChartOptions} height="340px" />
+            </div>
+
+            {/* MATRIU DE CORRELACIÓ / COVARIÀNCIA */}
+            <div className="lg:col-span-6 bg-white border border-slate-200/90 shadow-2xs rounded-3xl p-6 sm:p-7 space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                    Matriu d&apos;Interacció Creuada
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    {activeMatrixTab === "corr" ? "Mesura la sincronització (0=descorrelacionat)" : "Magnitud de covariància anualitzada"}
+                  </p>
+                </div>
+                <div className="flex rounded-lg border border-slate-200 p-0.5 text-[10px] font-mono">
+                  <button
+                    onClick={() => setActiveMatrixTab("corr")}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${activeMatrixTab === "corr" ? "bg-slate-900 text-white font-bold" : "text-slate-500 hover:text-slate-900"}`}
+                  >
+                    Correlació
+                  </button>
+                  <button
+                    onClick={() => setActiveMatrixTab("cov")}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${activeMatrixTab === "cov" ? "bg-slate-900 text-white font-bold" : "text-slate-500 hover:text-slate-900"}`}
+                  >
+                    Covariància
+                  </button>
+                </div>
+              </div>
+              <Chart option={matrixChartOptions} height="340px" />
+            </div>
+          </div>
+        )}
+
+        {/* MÒDUL 4: REBALANCEIG SUGGERIT SEGONS MARKOWITZ */}
+        {mptData && (
+          <div className="bg-white border border-slate-200/90 shadow-2xs rounded-3xl p-6 sm:p-8 space-y-4">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                3. Proposta de Rebalanceig Òptim segons Markowitz
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Reassignació de pesos necessària per assolir la ràtio de Sharpe màxima possible
               </p>
-              <span className="text-[11px] text-slate-400">CAGR anualitzat ponderat</span>
             </div>
 
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Volatilitat Real (σ)</span>
-                <Activity className="w-4 h-4 text-amber-500" />
-              </div>
-              <p className="text-2xl font-bold font-mono text-slate-900 mt-1">
-                {mptData.user_portfolio.volatility_annual_pct}%
-              </p>
-              <span className="text-[11px] text-slate-400">Risc anualitzat (252 dies)</span>
-            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[10px] font-mono uppercase text-slate-400">
+                    <th className="py-2.5">Instrument</th>
+                    <th className="py-2.5 text-right">Pes Actual</th>
+                    <th className="py-2.5 text-right">Òptim Màxim Sharpe</th>
+                    <th className="py-2.5 text-right">Ajust Suggerit (Δ)</th>
+                    <th className="py-2.5 text-right">Òptim Mínima Volatilitat</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 text-xs font-mono">
+                  {items.map((it) => {
+                    const actual = it.weight;
+                    const optSharpe = mptData.max_sharpe_portfolio.weights_pct[it.id] ?? 0;
+                    const optMinVol = mptData.min_volatility_portfolio.weights_pct[it.id] ?? 0;
+                    const delta = Number((optSharpe - actual).toFixed(1));
 
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Ràtio de Sharpe</span>
-                <Sparkles className="w-4 h-4 text-[#00B050]" />
-              </div>
-              <p className="text-2xl font-bold font-mono text-[#00B050] mt-1">
-                {mptData.user_portfolio.sharpe_ratio}
-              </p>
-              <span className="text-[11px] text-slate-400">Retorn per unitat de risc total</span>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Bonus Diversificació</span>
-                <ShieldAlert className="w-4 h-4 text-[#00B050]" />
-              </div>
-              <p className="text-2xl font-bold font-mono text-[#00B050] mt-1">
-                -{mptData.user_portfolio.diversification_benefit_pct}%
-              </p>
-              <span className="text-[11px] text-slate-400">Risc estalviat per descorrelació</span>
+                    return (
+                      <tr key={it.id} className="hover:bg-slate-50/50">
+                        <td className="py-3 font-semibold text-slate-800">
+                          {it.name} <span className="text-[10px] font-normal text-slate-400">({it.id})</span>
+                        </td>
+                        <td className="py-3 text-right text-slate-700">{actual}%</td>
+                        <td className="py-3 text-right text-[#00B050] font-bold">{optSharpe}%</td>
+                        <td className="py-3 text-right">
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                            delta > 0 
+                              ? "bg-emerald-50 text-[#00B050]" 
+                              : delta < 0 
+                              ? "bg-rose-50 text-rose-600" 
+                              : "text-slate-400"
+                          }`}>
+                            {delta > 0 ? `+${delta}%` : `${delta}%`}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right text-amber-700">{optMinVol}%</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* MÒDUL 3: FRONTERA EFICIENT + MATRIU */}
-      {mptData && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 bg-white border border-slate-200 shadow-sm rounded-xl p-6">
-            <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                  Frontera Eficient de Markowitz
-                </h3>
-                <p className="text-[11px] text-slate-400">
-                  500 carteres simulades (Monte Carlo) vs. Cartera Actual i Òptimes
-                </p>
-              </div>
-              <span className="text-[10px] font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                SLSQP Solved
-              </span>
-            </div>
-            <Chart option={frontierChartOptions} height="340px" />
-          </div>
-
-          <div className="lg:col-span-5 bg-white border border-slate-200 shadow-sm rounded-xl p-6">
-            <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                  Matriu d'Interacció Creuada
-                </h3>
-                <p className="text-[11px] text-slate-400">
-                  {activeMatrixTab === "corr" ? "Mesura la sincronització (0=descorrelacionat)" : "Magnitud de covariància anualitzada"}
-                </p>
-              </div>
-              <div className="flex rounded-lg border border-slate-200 p-0.5 text-[10px] font-mono">
-                <button
-                  onClick={() => setActiveMatrixTab("corr")}
-                  className={`px-2 py-1 rounded ${activeMatrixTab === "corr" ? "bg-slate-900 text-white" : "text-slate-500"}`}
-                >
-                  Correlació
-                </button>
-                <button
-                  onClick={() => setActiveMatrixTab("cov")}
-                  className={`px-2 py-1 rounded ${activeMatrixTab === "cov" ? "bg-slate-900 text-white" : "text-slate-500"}`}
-                >
-                  Covariància
-                </button>
-              </div>
-            </div>
-            <Chart option={matrixChartOptions} height="340px" />
-          </div>
-        </div>
-      )}
-
-      {/* MÒDUL 4: REBALANCEIG SUGGERIT */}
-      {mptData && (
-        <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-6 space-y-4">
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-              3. Proposta de Rebalanceig Òptim segons Markowitz
-            </h3>
-            <p className="text-[11px] text-slate-400">
-              Reassignació de pesos necessària per assolir la ràtio de Sharpe màxima possible
-            </p>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-100 text-[10px] font-mono uppercase text-slate-400">
-                  <th className="py-2.5">Instrument</th>
-                  <th className="py-2.5 text-right">Pes Actual</th>
-                  <th className="py-2.5 text-right">Òptim Màxim Sharpe</th>
-                  <th className="py-2.5 text-right">Ajust Suggerit (Δ)</th>
-                  <th className="py-2.5 text-right">Òptim Mínima Volatilitat</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 text-xs font-mono">
-                {items.map((it) => {
-                  const actual = it.weight;
-                  const optSharpe = mptData.max_sharpe_portfolio.weights_pct[it.id] ?? 0;
-                  const optMinVol = mptData.min_volatility_portfolio.weights_pct[it.id] ?? 0;
-                  const delta = Number((optSharpe - actual).toFixed(1));
-
-                  return (
-                    <tr key={it.id} className="hover:bg-slate-50/50">
-                      <td className="py-3 font-semibold text-slate-800">
-                        {it.name} <span className="text-[10px] font-normal text-slate-400">({it.id})</span>
-                      </td>
-                      <td className="py-3 text-right text-slate-700">{actual}%</td>
-                      <td className="py-3 text-right text-[#00B050] font-bold">{optSharpe}%</td>
-                      <td className="py-3 text-right">
-                        <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                          delta > 0 
-                            ? "bg-emerald-50 text-[#00B050]" 
-                            : delta < 0 
-                            ? "bg-rose-50 text-rose-600" 
-                            : "text-slate-400"
-                        }`}>
-                          {delta > 0 ? `+${delta}%` : `${delta}%`}
-                        </span>
-                      </td>
-                      <td className="py-3 text-right text-amber-700">{optMinVol}%</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
       </main>
     </div>
+  );
+}
+
+export default function PortfolioBuilderPage() {
+  return (
+    <Suspense fallback={<div className="p-16 text-center text-xs font-mono text-slate-400">Carregant Portfolio Builder...</div>}>
+      <PortfolioContent />
+    </Suspense>
   );
 }

@@ -16,7 +16,8 @@ import {
   TrendingDown,
   Percent,
   Layers,
-  ArrowUpRight
+  ArrowUpRight,
+  Plus
 } from "lucide-react";
 
 const PRESET_FUNDS = [
@@ -316,6 +317,30 @@ function OptimizeContent() {
                       </span>
                     </div>
                   </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
+                    <Link
+                      href={`/portfolio?add=${bestAlt.cand_isin}&name=${encodeURIComponent(bestAlt.cand_name)}`}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-semibold transition-colors shadow-2xs"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>+ Cartera</span>
+                    </Link>
+                    <Link
+                      href={`/compare?f1=${result.source_isin}&f2=${bestAlt.cand_isin}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+                    >
+                      <ArrowLeftRight className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Comparar Cara a Cara</span>
+                    </Link>
+                    <Link
+                      href={`/funds/${bestAlt.cand_isin}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#00B050] text-xs font-semibold transition-colors ml-auto"
+                    >
+                      <span>Fitxa</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
                 </div>
               ) : null}
 
@@ -441,10 +466,18 @@ function OptimizeContent() {
                               {alt.ret_gap_3y != null ? `${alt.ret_gap_3y > 0 ? "+" : ""}${alt.ret_gap_3y.toFixed(2)}%` : "N/D"}
                             </td>
                             <td className="py-3.5 px-5 text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-2">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Link
+                                  href={`/portfolio?add=${alt.cand_isin}&name=${encodeURIComponent(alt.cand_name)}`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+                                  title="Afegir fons a la cartera"
+                                >
+                                  <Plus className="w-3.5 h-3.5 text-[#00B050]" />
+                                  <span>+ Cartera</span>
+                                </Link>
                                 <Link
                                   href={`/compare?f1=${result.source_isin}&f2=${alt.cand_isin}`}
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
                                   title="Comparar cara a cara"
                                 >
                                   <ArrowLeftRight className="w-3.5 h-3.5 text-slate-500" />
@@ -452,7 +485,7 @@ function OptimizeContent() {
                                 </Link>
                                 <Link
                                   href={`/funds/${alt.cand_isin}`}
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#00B050] text-xs font-semibold transition-colors"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#00B050] text-xs font-semibold transition-colors"
                                   title="Veure fitxa completa"
                                 >
                                   <span>Fitxa</span>
