@@ -533,7 +533,7 @@ function ClosetIndexingContent() {
               {/* ACCIONS DE DESCARREGA I OPTIMITZACIÓ */}
               <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-slate-100">
                 <Link
-                  href={`/optimize?fund=${selectedFund}`}
+                  href={`/optimize?fund=${encodeURIComponent(selectedFund)}`}
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-[#00B050] hover:bg-[#009945] text-white text-xs font-semibold shadow-xs transition-colors"
                 >
                   <Sparkles className="w-4 h-4 text-emerald-100" />

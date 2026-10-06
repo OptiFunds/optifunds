@@ -414,20 +414,38 @@ export default function FundDetailPage() {
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-50">
+                    <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
                       <span className="text-slate-500 font-medium">
                         Solapament: <strong className="text-slate-800">{alt.overlap}%</strong>
                       </span>
-                      <Link
-                        href={`/funds/${alt.cand_isin}`}
-                        className="text-[#00B050] font-semibold inline-flex items-center gap-1 hover:underline text-xs"
-                      >
-                        <span>Auditar</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/compare?f1=${profile.isin}&f2=${alt.cand_isin}`}
+                          className="text-slate-500 hover:text-slate-900 font-medium inline-flex items-center gap-0.5 hover:underline text-[11px]"
+                          title="Comparar cara a cara"
+                        >
+                          <span>Comparar 1:1</span>
+                        </Link>
+                        <span className="text-slate-300">•</span>
+                        <Link
+                          href={`/funds/${alt.cand_isin}`}
+                          className="text-[#00B050] font-semibold inline-flex items-center gap-1 hover:underline text-xs"
+                        >
+                          <span>Auditar</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))}
+                
+                <Link
+                  href={`/optimize?fund=${encodeURIComponent(profile.isin)}`}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#00B050] hover:text-emerald-800 border border-emerald-200 text-xs font-bold transition-colors mt-2"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Veure totes les alternatives a l'Smart Switch →</span>
+                </Link>
               </div>
             ) : (
               <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-600 space-y-1">

@@ -11,7 +11,8 @@ import {
   Trash2, 
   Activity, 
   RefreshCw, 
-  Globe2
+  Globe2,
+  ArrowRight
 } from "lucide-react";
 import { fetchPortfolioMPT, fetchPortfolioLookthrough, MPTResponse } from "@/lib/api";
 
@@ -462,9 +463,19 @@ export default function PortfolioBuilderPage() {
           {items.map((item, idx) => (
             <div key={item.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 space-y-2">
               <div className="flex justify-between items-start">
-                <div>
+                <div className="space-y-1">
                   <p className="text-xs font-bold text-slate-900 line-clamp-1">{item.name}</p>
-                  <p className="text-[10px] font-mono text-slate-400">{item.id}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-slate-400">{item.id}</span>
+                    <Link
+                      href={`/optimize?fund=${encodeURIComponent(item.id)}`}
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 transition-colors"
+                      title={`Trobar alternatives indexades per a ${item.name}`}
+                    >
+                      <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
+                      <span>Smart Switch</span>
+                    </Link>
+                  </div>
                 </div>
                 {items.length > 2 && (
                   <button 
@@ -507,6 +518,30 @@ export default function PortfolioBuilderPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Banner de reducció de comissions amb Smart Switch */}
+      <div className="bg-gradient-to-r from-emerald-50/70 via-slate-50 to-blue-50/70 border border-emerald-200/80 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#00B050] text-white flex items-center justify-center shrink-0 shadow-xs">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-xs sm:text-sm font-bold text-slate-900 block">
+              Optimitza les comissions abans de rebalancejar
+            </span>
+            <p className="text-[11px] sm:text-xs text-slate-600 mt-0.5">
+              Reemplaça fons comercials d'alt cost per rèpliques indexades equivalents de màxim solapament a través de l'Smart Switch.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/optimize"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-bold shadow-xs transition-colors shrink-0"
+        >
+          <span>Explorar Smart Switch</span>
+          <ArrowRight className="w-3.5 h-3.5 text-emerald-700" />
+        </Link>
       </div>
 
       {/* MÒDUL 1: MAPAMUNDI DE MICRO-PUNTS + BARRES SECTORIALS EXTRA AMPLES */}

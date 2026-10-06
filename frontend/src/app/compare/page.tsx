@@ -209,6 +209,14 @@ function CompareContent() {
               <h2 className="text-base font-bold text-slate-900 mt-2">{fund1.fund_name}</h2>
               <span className="text-xs font-mono text-slate-400">ISIN: {fund1.isin}</span>
             </div>
+            <Link
+              href={`/optimize?fund=${encodeURIComponent(fund1.isin)}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors shrink-0"
+              title="Trobar alternatives indexades a l'Smart Switch"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Smart Switch</span>
+            </Link>
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
@@ -243,6 +251,14 @@ function CompareContent() {
               <h2 className="text-base font-bold text-slate-900 mt-2">{fund2.fund_name}</h2>
               <span className="text-xs font-mono text-slate-400">ISIN: {fund2.isin}</span>
             </div>
+            <Link
+              href={`/funds/${fund2.isin}`}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition-colors shrink-0"
+              title="Veure fitxa detallada del vehicle"
+            >
+              <span>Fitxa Fons</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
@@ -328,6 +344,31 @@ function CompareContent() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* CTA Banner cap a Smart Switch */}
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-50/80 via-slate-50 to-emerald-50/80 border border-slate-200 flex items-center justify-between gap-4 flex-wrap shadow-xs">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase bg-blue-600 text-white">
+              Smart Switch Engine
+            </span>
+            <span className="text-sm font-bold text-slate-900">
+              Vols explorar més alternatives indexades per a {fund1.fund_name}?
+            </span>
+          </div>
+          <p className="text-xs text-slate-600">
+            El motor de rèplica passiva d'OptiFunds analitza carteres completes i troba els millors fons indexats amb mínim cost i màxim solapament.
+          </p>
+        </div>
+        <Link
+          href={`/optimize?fund=${encodeURIComponent(fund1.isin)}`}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-[#00B050] text-white text-xs font-semibold shadow-sm transition-all shrink-0"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Obrir a l'Smart Switch</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
 
       {/* Gràfic comparatiu Base 100 */}

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { simulateCompoundInterest } from "@/lib/api";
 import Chart from "@/components/Chart";
-import { Calculator, TrendingDown, ShieldCheck, Percent, Layers } from "lucide-react";
+import { Calculator, TrendingDown, ShieldCheck, Percent, Layers, Sparkles, ArrowRight } from "lucide-react";
 
 export default function SimulatorPage() {
   const [initialCap, setInitialCap] = useState<number>(10000);
@@ -344,6 +345,29 @@ export default function SimulatorPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* BANNER CTA: DE LA SIMULACIÓ A L'ACCIÓ */}
+      <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl p-6 sm:p-8 flex items-center justify-between gap-6 flex-wrap shadow-lg">
+        <div className="space-y-1.5 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 text-white text-[11px] font-mono font-medium tracking-wide">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+            <span>ACCELERADOR D'ESTALVI REAL</span>
+          </div>
+          <h3 className="text-xl sm:text-2xl font-bold tracking-tight">
+            Vols passar de la simulació a l'estalvi efectiu en la teva cartera?
+          </h3>
+          <p className="text-xs sm:text-sm text-emerald-50 leading-relaxed">
+            Descobreix quins fons indexats homologats pel mercat espanyol repliquen el teu fons de gestió activa amb més d'un 70% de solapament i fins a un 1,7% menys de comissió anual.
+          </p>
+        </div>
+        <Link
+          href="/optimize"
+          className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white text-emerald-900 hover:bg-emerald-50 font-bold text-xs sm:text-sm shadow-md transition-all hover:shadow-lg shrink-0"
+        >
+          <span>Trobar Alternatives a l'Smart Switch</span>
+          <ArrowRight className="w-4 h-4 text-emerald-700" />
+        </Link>
       </div>
     </div>
   );

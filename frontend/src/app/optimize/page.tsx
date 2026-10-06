@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { optimizeFund, searchFunds, OptimizeResult, FundSummary } from "@/lib/api";
-import { Search, Sparkles, ShieldCheck, AlertCircle, Info, CheckCircle2 } from "lucide-react";
+import { Search, Sparkles, ShieldCheck, AlertCircle, Info, CheckCircle2, ArrowRight, ArrowLeftRight } from "lucide-react";
 
 function OptimizeContent() {
   const searchParams = useSearchParams();
@@ -24,6 +25,7 @@ function OptimizeContent() {
   // Cerca automàtica inicial en carregar la pàgina
   useEffect(() => {
     if (initialFund) {
+      setQuery(initialFund);
       handleSearch(initialFund, minOverlap);
     }
   }, [initialFund]);
@@ -297,6 +299,7 @@ function OptimizeContent() {
                         <th className="py-2.5 px-4 text-right">TER</th>
                         <th className="py-2.5 px-4 text-right">Estalvi TER</th>
                         <th className="py-2.5 px-4 text-right">Gap Retorn (3Y)</th>
+                        <th className="py-2.5 px-4 text-right">Accions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -313,6 +316,26 @@ function OptimizeContent() {
                           <td className="py-3 px-4 text-right font-mono text-emerald-600 font-medium">-{alt.ter_savings.toFixed(2)}%</td>
                           <td className="py-3 px-4 text-right font-mono text-slate-600">
                             {alt.ret_gap_3y != null ? `${alt.ret_gap_3y > 0 ? "+" : ""}${alt.ret_gap_3y.toFixed(2)}%` : "N/D"}
+                          </td>
+                          <td className="py-3 px-4 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Link
+                                href={`/compare?f1=${result.source_isin}&f2=${alt.cand_isin}`}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition-colors"
+                                title="Comparar cara a cara"
+                              >
+                                <ArrowLeftRight className="w-3 h-3 text-slate-500" />
+                                <span>Comparar</span>
+                              </Link>
+                              <Link
+                                href={`/funds/${alt.cand_isin}`}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-semibold transition-colors"
+                                title="Veure fitxa completa"
+                              >
+                                <span>Fitxa</span>
+                                <ArrowRight className="w-3 h-3" />
+                              </Link>
+                            </div>
                           </td>
                         </tr>
                       ))}
