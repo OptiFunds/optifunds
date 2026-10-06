@@ -39,9 +39,11 @@ def main():
     parser = argparse.ArgumentParser(description="Descarregador massiu de NAVs diaris de la CNMV")
     parser.add_argument("--local-zip", type=str, help="Camí a un fitxer ZIP de la CNMV ja descarregat")
     parser.add_argument("--year", type=int, default=2024, help="Any a consultar (per defecte 2024)")
+    parser.add_argument("--start-year", type=int, help="Any d'inici per a descàrrega multianual (ex: 2015)")
+    parser.add_argument("--end-year", type=int, default=2024, help="Any de finalització per a descàrrega multianual (ex: 2024)")
     parser.add_argument("--months", type=int, nargs="+", help="Llista de mesos (1..12)")
     parser.add_argument("--all-months", action="store_true", help="Descarrega tots els mesos disponibles de l'any")
-    parser.add_argument("--pace", type=float, default=3.0, help="Segons d'espera entre descàrregues (pacing anti-bloqueig, per defecte 3.0s)")
+    parser.add_argument("--pace", type=float, default=2.5, help="Segons d'espera entre descàrregues (pacing anti-bloqueig, per defecte 2.5s)")
     parser.add_argument("--output", type=str, default=str(DEFAULT_NAV_PARQUET), help="Ruta del fitxer Parquet")
 
     args = parser.parse_args()
@@ -89,61 +91,60 @@ def main():
         total_rows, total_instruments = merge_navs_into_parquet(df_navs, output_path)
         print(f"  ✓ Base de dades actualitzada: {total_rows:,} registres ({total_instruments:,} instruments).")
 
-    # 3. Cas B: Descàrrega orquestrada amb temporitzador / pacing
+    # 3. Cas B: Descàrrega orquestrada amb temporitzador / pacing (Multianual o Anual)
     else:
-        print(f"Consultant el registre oficial de la CNMV per a l'any {args.year}...")
-        try:
-            available_months = fetch_cnmv_month_download_links(args.year)
-            print(f"  ✓ Trobats {len(available_months)} mesos oficials disponibles.")
-        except Exception as e:
-            print(f"Error connectant amb la seu de la CNMV: {e}")
-            sys.exit(1)
-
-        months_to_process = []
-        if args.months:
-            months_to_process = [m for m in available_months if m["month"] in args.months]
-        elif args.all_months:
-            months_to_process = available_months
+        if args.start_year:
+            years_to_process = list(range(args.start_year, args.end_year + 1))
         else:
-            if available_months:
-                months_to_process = [available_months[-1]]
+            years_to_process = [args.year]
 
-        print(f"\nMesos seleccionats per a la ingesta: {len(months_to_process)}")
-        print(f"Pausa entre descàrregues configurada a: {args.pace}s (Polite Pacing)")
+        print(f"Anys a processar: {years_to_process}")
+        print(f"Pausa entre descàrregues: {args.pace}s (Polite Pacing)")
         print("-" * 72)
 
-        total_extracted_session = 0
-
-        for idx, m_info in enumerate(months_to_process, 1):
-            m_name = m_info["month_name"]
-            m_year = m_info["year"]
-            m_num = m_info["month"]
-            print(f"[{idx}/{len(months_to_process)}] Processant {m_name} {m_year}...")
-
+        for curr_year in years_to_process:
+            print(f"\n>>> INICIANT ANY {curr_year} <<<")
             try:
-                zip_path, was_downloaded = get_cached_or_download_zip(
-                    m_year, m_num, m_info["download_url"], 
-                    cache_dir=CACHE_DIR, 
-                    pace_seconds=args.pace if idx > 1 else 0
-                )
-                
-                status_orig = "descarregat de CNMV" if was_downloaded else "recuperat de memòria cau local"
-                size_mb = zip_path.stat().st_size / 1024 / 1024
-                print(f"    • Fitxer {zip_path.name} ({size_mb:.2f} MB, {status_orig})")
-
-                df_month = extract_navs_from_zip(zip_path, m_year, m_num)
-                pts_cnt = len(df_month)
-                funds_cnt = df_month["instrument"].nunique()
-                total_extracted_session += pts_cnt
-                print(f"    • Parsejats {pts_cnt:,} punts de NAV ({funds_cnt:,} instruments).")
-
-                # Fusió atòmica a DuckDB
-                total_rows, total_instruments = merge_navs_into_parquet(df_month, output_path)
-                print(f"    • Parquet actualitzat: {total_rows:,} punts totals ({total_instruments:,} instruments).")
-
+                available_months = fetch_cnmv_month_download_links(curr_year)
+                print(f"  ✓ Trobats {len(available_months)} mesos oficials per a {curr_year}.")
             except Exception as e:
-                print(f"    ✗ Error processant {m_name} {m_year}: {e}")
-                time.sleep(2.0)
+                print(f"  ✗ Error consultant registre de {curr_year}: {e}")
+                continue
+
+            months_to_process = []
+            if args.months and not args.start_year:
+                months_to_process = [m for m in available_months if m["month"] in args.months]
+            else:
+                months_to_process = available_months
+
+            for idx, m_info in enumerate(months_to_process, 1):
+                m_name = m_info["month_name"]
+                m_num = m_info["month"]
+                print(f"[{curr_year} - {idx}/{len(months_to_process)}] Processant {m_name} {curr_year}...")
+
+                try:
+                    zip_path, was_downloaded = get_cached_or_download_zip(
+                        curr_year, m_num, m_info["download_url"], 
+                        cache_dir=CACHE_DIR, 
+                        pace_seconds=args.pace
+                    )
+                    
+                    status_orig = "descarregat de CNMV" if was_downloaded else "recuperat de memòria cau local"
+                    size_mb = zip_path.stat().st_size / 1024 / 1024
+                    print(f"    • {zip_path.name} ({size_mb:.2f} MB, {status_orig})")
+
+                    df_month = extract_navs_from_zip(zip_path, curr_year, m_num)
+                    pts_cnt = len(df_month)
+                    funds_cnt = df_month["instrument"].nunique()
+                    print(f"    • Parsejats {pts_cnt:,} punts de NAV ({funds_cnt:,} instruments).")
+
+                    # Fusió atòmica a DuckDB
+                    total_rows, total_instruments = merge_navs_into_parquet(df_month, output_path)
+                    print(f"    • Parquet: {total_rows:,} punts acumulats ({total_instruments:,} instruments).")
+
+                except Exception as e:
+                    print(f"    ✗ Error processant {m_name} {curr_year}: {e}")
+                    time.sleep(2.0)
 
     # 4. Resum final
     print("\n" + "=" * 72)
