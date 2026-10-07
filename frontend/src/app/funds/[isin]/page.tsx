@@ -61,7 +61,7 @@ export default function FundDetailPage() {
         setData(res);
       })
       .catch((err) => {
-        console.error(err);
+        console.warn(err);
         setError(err?.message || "No s'ha pogut carregar l'auditoria d'aquest fons.");
       })
       .finally(() => setLoading(false));

@@ -7,11 +7,11 @@ import { Activity, Sparkles, TrendingUp } from "lucide-react";
 
 const BASE_UNIVERSE: RiskReturnPoint[] = [
   { isin: "IE00B03HD191", fund_name: "Vanguard Global Stock Index", ter: 0.18, volatility: 14.8, return_annual: 9.4, sharpe_ratio: 0.58 },
-  { isin: "LU0996182563", fund_name: "Amundi Index MSCI World", ter: 0.30, volatility: 14.9, return_annual: 9.2, sharpe_ratio: 0.56 },
+  { isin: "ES0112611001", fund_name: "Azvalor Internacional FI", ter: 1.89, volatility: 15.0, return_annual: 16.5, sharpe_ratio: 0.25 },
   { isin: "LU0690375182", fund_name: "Fundsmith Equity Fund", ter: 1.05, volatility: 13.5, return_annual: 11.2, sharpe_ratio: 0.72 },
-  { isin: "ES0152745003", fund_name: "Magallanes European Equity", ter: 1.85, volatility: 18.2, return_annual: 8.5, sharpe_ratio: 0.38 },
-  { isin: "IE00B5BMR087", fund_name: "iShares Core S&P 500 UCITS ETF", ter: 0.07, volatility: 16.1, return_annual: 12.3, sharpe_ratio: 0.69 },
-  { isin: "ES0174115012", fund_name: "Cobas Selección FI", ter: 1.75, volatility: 19.4, return_annual: 7.8, sharpe_ratio: 0.31 }
+  { isin: "ES0159259011", fund_name: "Magallanes European Equity M", ter: 1.80, volatility: 18.2, return_annual: 8.5, sharpe_ratio: 0.38 },
+  { isin: "LU0496786574", fund_name: "Amundi Core S&P 500 Swap UCITS ETF", ter: 0.05, volatility: 13.1, return_annual: 20.6, sharpe_ratio: 0.31 },
+  { isin: "ES0124037013", fund_name: "Cobas Selección FI", ter: 1.75, volatility: 19.4, return_annual: 7.8, sharpe_ratio: 0.31 }
 ];
 
 export default function RiskReturnPage() {

@@ -311,6 +311,13 @@ def get_fund_deep_dive(isin: str, min_overlap: float = 0.0):
     con = duckdb.connect()
     isin_safe = isin.replace("'", "''").strip()
 
+    # Resolució d'àlies o ISINs coneguts
+    KNOWN_ALIASES = {
+        "ES0165144004": "ES0112611001",  # Azvalor Internacional FI
+    }
+    if isin_safe in KNOWN_ALIASES:
+        isin_safe = KNOWN_ALIASES[isin_safe]
+
     # Detecció dinàmica de columnes
     c_name = get_existing_col(con, m_path, ["Fund Name", "Fund_Name_Full"], "'Sense Nom'")
     c_isin = get_existing_col(con, m_path, ["ISIN", "Instrument"], "''")
@@ -382,6 +389,58 @@ def get_fund_deep_dive(isin: str, min_overlap: float = 0.0):
             except Exception:
                 pass
 
+    if fund_df.empty and len(isin_safe) == 12:
+        # Fallback per error de dígit de control (Luhn checksum)
+        try:
+            q_prefix = f"""
+                SELECT 
+                    COALESCE({c_isin}, '') AS isin,
+                    COALESCE({c_ric}, '') AS ric,
+                    COALESCE({c_name}, 'Sense Nom') AS name,
+                    COALESCE({c_cat}, 'Renda Variable') AS category,
+                    COALESCE({c_curr}, 'EUR') AS currency,
+                    ROUND(COALESCE({clean_ter}, 1.50), 2) AS ter,
+                    ROUND(COALESCE({clean_fee}, 1.25), 2) AS mgmt_fee,
+                    ROUND({clean_r1y}, 2) AS ret_1y,
+                    ROUND({clean_r3y}, 2) AS ret_3y,
+                    ROUND({clean_r5y}, 2) AS ret_5y,
+                    ROUND({clean_vol}, 2) AS volatility,
+                    ROUND({clean_shp}, 2) AS sharpe
+                FROM read_parquet('{m_path}')
+                WHERE {c_isin} LIKE '{isin_safe[:11]}%' OR Instrument LIKE '{isin_safe[:11]}%'
+                LIMIT 1
+            """
+            fund_df = con.execute(q_prefix).df()
+        except Exception:
+            pass
+
+    if fund_df.empty:
+        # Fallback a l'univers internacional optifunds_master.csv
+        csv_m = DATA_DIR / "optifunds_master.csv"
+        if csv_m.exists():
+            try:
+                q_csv = f"""
+                    SELECT 
+                        ISIN AS isin,
+                        RIC AS ric,
+                        "Fund Name" AS name,
+                        'Fons Internacional' AS category,
+                        'EUR' AS currency,
+                        0.30 AS ter,
+                        0.25 AS mgmt_fee,
+                        NULL::DOUBLE AS ret_1y,
+                        NULL::DOUBLE AS ret_3y,
+                        NULL::DOUBLE AS ret_5y,
+                        NULL::DOUBLE AS volatility,
+                        NULL::DOUBLE AS sharpe
+                    FROM read_csv_auto('{csv_m}')
+                    WHERE ISIN = '{isin_safe}' OR RIC = '{isin_safe}' OR Instrument = '{isin_safe}' OR "Fund Name" ILIKE '%{isin_safe}%'
+                    LIMIT 1
+                """
+                fund_df = con.execute(q_csv).df()
+            except Exception:
+                pass
+
     if fund_df.empty:
         raise HTTPException(status_code=404, detail=f"No s'ha trobat cap vehicle per a: {isin}")
 
@@ -411,6 +470,22 @@ def get_fund_deep_dive(isin: str, min_overlap: float = 0.0):
                 LIMIT 10
             """
             holdings = con.execute(q_hold).df().to_dict(orient="records")
+        except Exception:
+            pass
+
+    if not holdings and (DATA_DIR / "optifunds_holdings.csv").exists():
+        try:
+            q_hold_csv = f"""
+                SELECT 
+                    COALESCE("Holding Name", 'Títol') AS name,
+                    COALESCE("Holding RIC", '-') AS ric,
+                    ROUND(TRY_CAST(REPLACE(REPLACE(CAST("Clean_Weight" AS VARCHAR), '%', ''), ',', '.') AS DOUBLE), 2) AS weight
+                FROM read_csv_auto('{DATA_DIR / "optifunds_holdings.csv"}')
+                WHERE Instrument IN ({fnd_clause})
+                ORDER BY weight DESC
+                LIMIT 10
+            """
+            holdings = con.execute(q_hold_csv).df().to_dict(orient="records")
         except Exception:
             pass
 
