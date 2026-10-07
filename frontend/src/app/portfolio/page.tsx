@@ -20,14 +20,20 @@ import {
   RotateCcw,
   CheckCircle2,
   Percent,
-  AlertCircle
+  AlertCircle,
+  Calendar,
+  History,
+  TrendingDown,
+  LineChart
 } from "lucide-react";
 import { 
   fetchPortfolioMPT, 
   fetchPortfolioLookthrough, 
+  fetchPortfolioBacktest,
   searchFunds, 
   MPTResponse, 
-  FundSummary 
+  FundSummary,
+  PortfolioBacktestResponse
 } from "@/lib/api";
 
 const Chart = dynamic(() => import("@/components/Chart"), { ssr: false });
@@ -50,31 +56,31 @@ interface PortfolioPreset {
 const PRESET_PORTFOLIOS: PortfolioPreset[] = [
   {
     id: "indexada",
-    name: "100% Indexada Global",
-    badge: "TER ~0.15%",
-    description: "Rèplica passiva de màxima diversificació mundial amb mínim cost.",
+    name: "100% Indexada (Baix Cost)",
+    badge: "TER ~0.32%",
+    description: "Rèplica passiva de màxima diversificació internacional (EUA, Europa, Espanya).",
     items: [
-      { id: "IE00B03HD191", name: "Vanguard Global Stock Index", weight: 50, ter: 0.18 },
-      { id: "IE00B5BMR087", name: "iShares Core S&P 500 UCITS ETF", weight: 30, ter: 0.07 },
-      { id: "LU0996182563", name: "Amundi Index MSCI World", weight: 20, ter: 0.30 },
+      { id: "ES0114763032", name: "Bankinter Índice América R (S&P 500)", weight: 40, ter: 0.35 },
+      { id: "ES0110098037", name: "BBVA Bolsa Índice Euro (EuroStoxx)", weight: 30, ter: 0.30 },
+      { id: "ES0114794037", name: "Bankinter Índice Ibex R (IBEX 35)", weight: 30, ter: 0.30 },
     ],
   },
   {
     id: "equilibrada",
-    name: "Equilibrada 60/40 Institucional",
-    badge: "TER ~0.55%",
-    description: "Cartera clàssica de creixement i estabilitat amb gestió d'autor.",
+    name: "Equilibrada Institucional",
+    badge: "TER ~1.35%",
+    description: "Combinació de creixement global indexat amb gestió activa de convicció.",
     items: [
-      { id: "LP60078536", name: "Vanguard Global Stock Index", weight: 50, ter: 0.18 },
-      { id: "LP68227672", name: "Fundsmith Equity Fund", weight: 30, ter: 1.05 },
-      { id: "LP68294156", name: "Magallanes European Equity", weight: 20, ter: 1.85 },
+      { id: "ES0114763032", name: "Bankinter Índice América R (S&P 500)", weight: 40, ter: 0.35 },
+      { id: "ES0159259011", name: "Magallanes European Equity M FI", weight: 30, ter: 1.85 },
+      { id: "ES0114388038", name: "Kutxabank Bolsa Estandar FI", weight: 30, ter: 1.85 },
     ],
   },
   {
     id: "bancaria",
     name: "Bancària Comercial Espanyola",
     badge: "TER ~1.73%",
-    description: "Cartera típica comercial venuda per oficines bancàries.",
+    description: "Cartera típica comercial distribuïda per oficines de banca comercial.",
     items: [
       { id: "ES0114388038", name: "Kutxabank Bolsa Estandar FI", weight: 40, ter: 1.85 },
       { id: "ES0175224031", name: "Santander Acciones Españolas FI", weight: 35, ter: 1.70 },
@@ -88,12 +94,12 @@ const PRESET_PORTFOLIOS: PortfolioPreset[] = [
     description: "Gestió activa pura d'alta convicció i màxim Active Share.",
     items: [
       { id: "ES0159259011", name: "Magallanes European Equity M FI", weight: 50, ter: 1.85 },
-      { id: "ES0165144004", name: "Azvalor Internacional FI", weight: 50, ter: 1.80 },
+      { id: "ES0112611001", name: "Azvalor Internacional FI", weight: 50, ter: 1.80 },
     ],
   },
 ];
 
-const DEFAULT_PORTFOLIO: PortfolioItem[] = PRESET_PORTFOLIOS[1].items;
+const DEFAULT_PORTFOLIO: PortfolioItem[] = PRESET_PORTFOLIOS[2].items;
 
 // Matriu densa de punts cartogràfics del món [x, y, regió]
 const WORLD_DOTS: [number, number, string][] = [
@@ -158,9 +164,14 @@ function PortfolioContent() {
   const searchParams = useSearchParams();
 
   const [items, setItems] = useState<PortfolioItem[]>(DEFAULT_PORTFOLIO);
-  const [activePresetId, setActivePresetId] = useState<string>("equilibrada");
+  const [activePresetId, setActivePresetId] = useState<string>("bancaria");
   const [mptData, setMptData] = useState<MPTResponse | null>(null);
   const [lookthroughData, setLookthroughData] = useState<any | null>(null);
+  const [backtestData, setBacktestData] = useState<PortfolioBacktestResponse | null>(null);
+  const [backtestPeriod, setBacktestPeriod] = useState<string>("10y");
+  const [backtestBenchmark, setBacktestBenchmark] = useState<string>("IBEX35");
+  const [showDrawdownChart, setShowDrawdownChart] = useState<boolean>(false);
+  const [backtestLoading, setBacktestLoading] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [activeMatrixTab, setActiveMatrixTab] = useState<"corr" | "cov">("corr");
@@ -239,16 +250,18 @@ function PortfolioContent() {
     }
 
     setLoading(true);
+    setBacktestLoading(true);
     setError(null);
 
     const allocations: Record<string, number> = {};
     listToCalc.forEach((it) => { allocations[it.id] = Number(it.weight); });
 
     try {
-      // Fem servir allSettled per robustesa màxima: si MPT manca d'històric per 1 fons, el Lookthrough (mapa, sectors, holdings) no es trenca!
-      const [mptRes, ltRes] = await Promise.allSettled([
+      // Execució paral·lela de MPT, Lookthrough i Backtest Històric Real CNMV
+      const [mptRes, ltRes, btRes] = await Promise.allSettled([
         fetchPortfolioMPT(allocations),
-        fetchPortfolioLookthrough(allocations)
+        fetchPortfolioLookthrough(allocations),
+        fetchPortfolioBacktest(allocations, backtestPeriod, backtestBenchmark)
       ]);
 
       if (mptRes.status === "fulfilled") {
@@ -263,13 +276,50 @@ function PortfolioContent() {
         console.warn("Lookthrough error:", ltRes.reason);
       }
 
-      if (mptRes.status === "rejected" && ltRes.status === "rejected") {
+      if (btRes.status === "fulfilled") {
+        setBacktestData(btRes.value);
+      } else {
+        console.warn("Backtest error:", btRes.reason);
+      }
+
+      if (mptRes.status === "rejected" && ltRes.status === "rejected" && btRes.status === "rejected") {
         setError("No s'han pogut calcular les mètriques d'aquests vehicles a la base de dades.");
       }
     } catch (err: any) {
       setError(err.message || "Error al connectar amb el motor quantitatiu.");
     } finally {
       setLoading(false);
+      setBacktestLoading(false);
+    }
+  };
+
+  const handlePeriodChange = async (newPeriod: string) => {
+    setBacktestPeriod(newPeriod);
+    const allocations: Record<string, number> = {};
+    items.forEach((it) => { allocations[it.id] = Number(it.weight); });
+    setBacktestLoading(true);
+    try {
+      const res = await fetchPortfolioBacktest(allocations, newPeriod, backtestBenchmark);
+      setBacktestData(res);
+    } catch (err) {
+      console.warn("Error canviant període de backtest:", err);
+    } finally {
+      setBacktestLoading(false);
+    }
+  };
+
+  const handleBenchmarkChange = async (newBmk: string) => {
+    setBacktestBenchmark(newBmk);
+    const allocations: Record<string, number> = {};
+    items.forEach((it) => { allocations[it.id] = Number(it.weight); });
+    setBacktestLoading(true);
+    try {
+      const res = await fetchPortfolioBacktest(allocations, backtestPeriod, newBmk);
+      setBacktestData(res);
+    } catch (err) {
+      console.warn("Error canviant benchmark de backtest:", err);
+    } finally {
+      setBacktestLoading(false);
     }
   };
 
@@ -600,6 +650,128 @@ function PortfolioContent() {
       ],
     };
   }, [mptData, activeMatrixTab]);
+
+  const backtestChartOptions = useMemo(() => {
+    if (!backtestData || !backtestData.timeline || backtestData.timeline.length === 0) return {};
+
+    if (showDrawdownChart) {
+      return {
+        backgroundColor: "transparent",
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: "#0F172A",
+          borderColor: "#334155",
+          textStyle: { color: "#F8FAFC", fontSize: 11 },
+          valueFormatter: (value: any) => `${value}%`,
+        },
+        grid: { top: "8%", right: "3%", bottom: "12%", left: "4%", containLabel: true },
+        xAxis: {
+          type: "category",
+          boundaryGap: false,
+          data: backtestData.timeline,
+          axisLine: { lineStyle: { color: "#CBD5E1" } },
+          axisLabel: { color: "#64748B", fontSize: 10 },
+        },
+        yAxis: {
+          type: "value",
+          max: 0,
+          axisLabel: { color: "#64748B", fontSize: 10, formatter: "{value}%" },
+          splitLine: { lineStyle: { color: "#F1F5F9", type: "dashed" } },
+        },
+        series: [
+          {
+            name: "Drawdown Cartera",
+            type: "line",
+            smooth: 0.15,
+            data: backtestData.portfolio_drawdown_series,
+            lineStyle: { width: 2, color: "#EF4444" },
+            itemStyle: { color: "#EF4444" },
+            areaStyle: {
+              color: {
+                type: "linear",
+                x: 0, y: 0, x2: 0, y2: 1,
+                colorStops: [
+                  { offset: 0, color: "rgba(239, 68, 68, 0.05)" },
+                  { offset: 1, color: "rgba(239, 68, 68, 0.35)" }
+                ]
+              }
+            }
+          }
+        ]
+      };
+    }
+
+    const palette = ["#3B82F6", "#F59E0B", "#8B5CF6", "#EC4899", "#14B8A6", "#6366F1"];
+    const constituentSeries = Object.entries(backtestData.funds || {}).map(([isin, f], idx) => ({
+      name: `${f.name.slice(0, 24)} (${f.weight_pct}%)`,
+      type: "line",
+      smooth: 0.2,
+      data: f.base100_series,
+      lineStyle: { width: 1.5, color: palette[idx % palette.length], opacity: 0.65 },
+      itemStyle: { color: palette[idx % palette.length] },
+    }));
+
+    return {
+      backgroundColor: "transparent",
+      tooltip: {
+        trigger: "axis",
+        backgroundColor: "#0F172A",
+        borderColor: "#334155",
+        textStyle: { color: "#F8FAFC", fontSize: 11 },
+        valueFormatter: (value: any) => `${value} pts (Base 100)`,
+      },
+      legend: {
+        bottom: 0,
+        textStyle: { color: "#64748B", fontSize: 10 },
+        type: "scroll",
+      },
+      grid: { top: "8%", right: "3%", bottom: "16%", left: "4%", containLabel: true },
+      xAxis: {
+        type: "category",
+        boundaryGap: false,
+        data: backtestData.timeline,
+        axisLine: { lineStyle: { color: "#CBD5E1" } },
+        axisLabel: { color: "#64748B", fontSize: 10 },
+      },
+      yAxis: {
+        type: "value",
+        scale: true,
+        axisLabel: { color: "#64748B", fontSize: 10 },
+        splitLine: { lineStyle: { color: "#F1F5F9", type: "dashed" } },
+      },
+      series: [
+        {
+          name: `Cartera Ponderada (${backtestData.metrics.total_return_pct >= 0 ? "+" : ""}${backtestData.metrics.total_return_pct}%)`,
+          type: "line",
+          smooth: 0.2,
+          data: backtestData.portfolio_base100_series,
+          lineStyle: { width: 3.5, color: "#00B050" },
+          itemStyle: { color: "#00B050" },
+          areaStyle: {
+            color: {
+              type: "linear",
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: "rgba(0, 176, 80, 0.22)" },
+                { offset: 1, color: "rgba(0, 176, 80, 0.0)" }
+              ]
+            }
+          },
+          z: 10
+        },
+        ...(backtestData.benchmark_base100_series && backtestData.benchmark_base100_series.length > 0 ? [{
+          name: `${backtestData.benchmark?.name || "Benchmark"} (${backtestData.benchmark?.total_return_pct >= 0 ? "+" : ""}${backtestData.benchmark?.total_return_pct ?? 0}%)`,
+          type: "line",
+          smooth: 0.2,
+          data: backtestData.benchmark_base100_series,
+          lineStyle: { width: 2, color: "#64748B", type: "dashed" },
+          itemStyle: { color: "#64748B" },
+          z: 5
+        }] : []),
+        ...constituentSeries
+      ]
+    };
+  }, [backtestData, showDrawdownChart]);
 
   return (
     <div className="bg-white flex flex-col font-sans">
@@ -1117,6 +1289,256 @@ function PortfolioContent() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* MÒDUL 4: EVOLUCIÓ HISTÒRICA OFICIAL CNMV & BACKTEST REBALANÇAT (2015 - 2024) */}
+        {backtestData && (
+          <div className="bg-white border border-slate-200/90 shadow-2xs rounded-3xl p-6 sm:p-8 space-y-6">
+            
+            {/* ENCAPÇALAMENT I SELECTORS */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-[#00B050] border border-emerald-100 uppercase tracking-wider">
+                    Sèrie Històrica Oficial CNMV // 2015 - 2024
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">
+                    {backtestData.date_range.total_days.toLocaleString()} sessions diàries auditades
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mt-1">
+                  4. Evolució Històrica Real de la Cartera & Backtest
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Rendibilitat acumulada rebalançada diàriament dels fons que componen la teva cartera enfront del mercat
+                </p>
+              </div>
+
+              {/* CONTROLS: HORITZÓ TEMPORAL, BENCHMARK I TIPUS DE GRÀFIC */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* SELECTOR D'HORITZÓ */}
+                <div className="flex rounded-xl bg-slate-100 p-1 text-xs font-semibold">
+                  {[
+                    { id: "1y", label: "1A" },
+                    { id: "3y", label: "3A" },
+                    { id: "5y", label: "5A" },
+                    { id: "10y", label: "10A" },
+                    { id: "max", label: "Màx" },
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => handlePeriodChange(p.id)}
+                      disabled={backtestLoading}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        backtestPeriod === p.id
+                          ? "bg-white text-slate-900 shadow-2xs font-bold"
+                          : "text-slate-500 hover:text-slate-900"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* SELECTOR DE BENCHMARK */}
+                <div className="flex rounded-xl bg-slate-100 p-1 text-xs font-semibold">
+                  {[
+                    { id: "IBEX35", label: "IBEX 35" },
+                    { id: "EUROSTOXX50", label: "EuroStoxx 50" },
+                    { id: "SP500", label: "S&P 500" },
+                  ].map((b) => (
+                    <button
+                      key={b.id}
+                      onClick={() => handleBenchmarkChange(b.id)}
+                      disabled={backtestLoading}
+                      className={`px-2.5 py-1.5 rounded-lg transition-all ${
+                        backtestBenchmark === b.id
+                          ? "bg-white text-slate-900 shadow-2xs font-bold"
+                          : "text-slate-500 hover:text-slate-900"
+                      }`}
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* TOGGLE TRAJECTÒRIA / DRAWDOWN */}
+                <div className="flex rounded-xl border border-slate-200 p-0.5 text-xs">
+                  <button
+                    onClick={() => setShowDrawdownChart(false)}
+                    className={`px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+                      !showDrawdownChart
+                        ? "bg-slate-900 text-white font-bold"
+                        : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    Base 100
+                  </button>
+                  <button
+                    onClick={() => setShowDrawdownChart(true)}
+                    className={`px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+                      showDrawdownChart
+                        ? "bg-rose-600 text-white font-bold"
+                        : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    Drawdown %
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* GRÀFIC PRINCIPAL */}
+            <div className="relative">
+              {backtestLoading && (
+                <div className="absolute inset-0 bg-white/70 backdrop-blur-2xs z-20 flex items-center justify-center">
+                  <div className="flex items-center gap-2 text-xs font-mono text-slate-600 bg-white px-4 py-2 rounded-xl shadow-md border border-slate-100">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#00B050]" />
+                    <span>Recalculant sèrie històrica de 10 anys...</span>
+                  </div>
+                </div>
+              )}
+              <Chart option={backtestChartOptions} height="380px" />
+            </div>
+
+            {/* BENTO GRID DE MÈTRIQUES DEL BACKTEST REAL */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 pt-2">
+              {/* RETORN TOTAL */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-[10px] font-mono uppercase text-slate-400 block">Retorn Acumulat</span>
+                <span className={`text-xl font-extrabold font-mono mt-1 block ${
+                  backtestData.metrics.total_return_pct >= 0 ? "text-[#00B050]" : "text-rose-600"
+                }`}>
+                  {backtestData.metrics.total_return_pct >= 0 ? "+" : ""}{backtestData.metrics.total_return_pct}%
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5 block truncate">
+                  vs {backtestData.benchmark?.total_return_pct ?? 0}% ({backtestData.benchmark?.name?.slice(0, 10)})
+                </span>
+              </div>
+
+              {/* CAGR ANUALITZAT */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-[10px] font-mono uppercase text-slate-400 block">CAGR Anualitzat</span>
+                <span className="text-xl font-extrabold text-slate-900 font-mono mt-1 block">
+                  {backtestData.metrics.cagr_pct >= 0 ? "+" : ""}{backtestData.metrics.cagr_pct}%
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">Taxa anual composta</span>
+              </div>
+
+              {/* VOLATILITAT REAL */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-[10px] font-mono uppercase text-slate-400 block">Volatilitat Anual</span>
+                <span className="text-xl font-extrabold text-slate-900 font-mono mt-1 block">
+                  {backtestData.metrics.volatility_pct}%
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  vs {backtestData.benchmark?.volatility_pct ?? 0}% mercat
+                </span>
+              </div>
+
+              {/* MÀXIM DRAWDOWN */}
+              <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-100">
+                <span className="text-[10px] font-mono uppercase text-rose-700 block">Màxim Drawdown</span>
+                <span className="text-xl font-extrabold text-rose-600 font-mono mt-1 block">
+                  {backtestData.metrics.max_drawdown_pct}%
+                </span>
+                <span className="text-[10px] text-rose-500 font-mono mt-0.5 block">
+                  Mínim: {backtestData.metrics.max_drawdown_date}
+                </span>
+              </div>
+
+              {/* SHARPE HISTÒRIC */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-[10px] font-mono uppercase text-slate-400 block">Ràtio de Sharpe</span>
+                <span className="text-xl font-extrabold text-slate-900 font-mono mt-1 block">
+                  {backtestData.metrics.sharpe_ratio}
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Sortino: {backtestData.metrics.sortino_ratio}
+                </span>
+              </div>
+
+              {/* ALFA VS BENCHMARK */}
+              <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-100">
+                <span className="text-[10px] font-mono uppercase text-emerald-800 block">Alfa vs Benchmark</span>
+                <span className={`text-xl font-extrabold font-mono mt-1 block ${
+                  (backtestData.benchmark?.alpha_annual_pct ?? 0) >= 0 ? "text-[#00B050]" : "text-rose-600"
+                }`}>
+                  {(backtestData.benchmark?.alpha_annual_pct ?? 0) >= 0 ? "+" : ""}
+                  {backtestData.benchmark?.alpha_annual_pct ?? 0}%
+                </span>
+                <span className="text-[10px] text-emerald-700 mt-0.5 block">
+                  Beta: {backtestData.benchmark?.beta ?? 1.0}
+                </span>
+              </div>
+            </div>
+
+            {/* TAULA DE RENDIMENT ANY PER ANY (2015-2024) */}
+            {backtestData.yearly_performance && backtestData.yearly_performance.length > 0 && (
+              <div className="pt-2">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-slate-500" />
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      Desglossament per Anys Naturals (2015 – 2024)
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Retorns oficials tancament 31 de desembre
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto mt-2">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-[10px] uppercase text-slate-400">
+                        <th className="py-2 px-3">Any</th>
+                        <th className="py-2 px-3 text-right">Rendibilitat Cartera</th>
+                        <th className="py-2 px-3 text-right">Rendibilitat Benchmark</th>
+                        <th className="py-2 px-3 text-right">Diferencial (Alfa)</th>
+                        <th className="py-2 px-3 text-right">Estat</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {backtestData.yearly_performance.map((yr) => {
+                        const beat = yr.excess_return_pct !== null && yr.excess_return_pct > 0;
+                        return (
+                          <tr key={yr.year} className="hover:bg-slate-50/60 transition-colors">
+                            <td className="py-2.5 px-3 font-bold text-slate-900">{yr.year}</td>
+                            <td className={`py-2.5 px-3 text-right font-bold ${
+                              yr.portfolio_return_pct >= 0 ? "text-emerald-700" : "text-rose-600"
+                            }`}>
+                              {yr.portfolio_return_pct >= 0 ? "+" : ""}{yr.portfolio_return_pct}%
+                            </td>
+                            <td className="py-2.5 px-3 text-right text-slate-500">
+                              {yr.benchmark_return_pct !== null ? `${yr.benchmark_return_pct >= 0 ? "+" : ""}${yr.benchmark_return_pct}%` : "—"}
+                            </td>
+                            <td className={`py-2.5 px-3 text-right font-bold ${
+                              yr.excess_return_pct !== null
+                                ? yr.excess_return_pct >= 0 ? "text-[#00B050]" : "text-rose-600"
+                                : "text-slate-400"
+                            }`}>
+                              {yr.excess_return_pct !== null ? `${yr.excess_return_pct >= 0 ? "+" : ""}${yr.excess_return_pct}%` : "—"}
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              {yr.excess_return_pct !== null ? (
+                                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                                  beat ? "bg-emerald-50 text-[#00B050]" : "bg-slate-100 text-slate-500"
+                                }`}>
+                                  {beat ? "Supera mercat" : "Per sota"}
+                                </span>
+                              ) : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 

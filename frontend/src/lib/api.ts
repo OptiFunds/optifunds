@@ -413,3 +413,140 @@ export async function fetchBenchmarkRecommendation(fund: string): Promise<Benchm
   return res.json();
 }
 
+// ==========================================
+// 7. SÈRIES HISTÒRIQUES CNMV I BACKTEST DE CARTERA (2015-2024)
+// ==========================================
+export interface BacktestFundItem {
+  name: string;
+  isin: string;
+  weight_pct: number;
+  total_return_pct: number;
+  base100_series: number[];
+}
+
+export interface BacktestYearlyRow {
+  year: number;
+  portfolio_return_pct: number;
+  benchmark_return_pct: number | null;
+  excess_return_pct: number | null;
+}
+
+export interface PortfolioBacktestResponse {
+  period: string;
+  date_range: {
+    start: string;
+    end: string;
+    total_days: number;
+  };
+  metrics: {
+    total_return_pct: number;
+    cagr_pct: number;
+    volatility_pct: number;
+    sharpe_ratio: number;
+    sortino_ratio: number;
+    max_drawdown_pct: number;
+    max_drawdown_date: string;
+    calmar_ratio: number;
+  };
+  benchmark: {
+    name: string;
+    isin: string;
+    total_return_pct: number;
+    cagr_pct: number;
+    volatility_pct: number;
+    max_drawdown_pct: number;
+    beta: number;
+    alpha_annual_pct: number;
+  };
+  funds: Record<string, BacktestFundItem>;
+  timeline: string[];
+  portfolio_base100_series: number[];
+  portfolio_drawdown_series: number[];
+  benchmark_base100_series: number[];
+  yearly_performance: BacktestYearlyRow[];
+}
+
+export interface FundHistoryResponse {
+  fund: {
+    isin: string;
+    name: string;
+    category: string;
+    ter: number;
+  };
+  period: string;
+  date_range: {
+    start: string;
+    end: string;
+    total_days: number;
+  };
+  metrics: {
+    total_return_pct: number;
+    cagr_pct: number;
+    volatility_pct: number;
+    sharpe_ratio: number;
+    max_drawdown_pct: number;
+    max_drawdown_date: string;
+    calmar_ratio: number;
+  };
+  benchmark: {
+    name: string;
+    isin: string;
+    total_return_pct: number;
+    cagr_pct: number;
+    volatility_pct: number;
+    max_drawdown_pct: number;
+    beta: number;
+    alpha_annual_pct: number;
+  };
+  timeline: string[];
+  nav_series: number[];
+  base100_series: number[];
+  drawdown_series: number[];
+  benchmark_base100_series: number[];
+  yearly_performance: Array<{
+    year: number;
+    fund_return_pct: number;
+    benchmark_return_pct: number | null;
+    excess_return_pct: number | null;
+  }>;
+}
+
+export async function fetchPortfolioBacktest(
+  allocations: Record<string, number>,
+  period: string = "max",
+  benchmarkIsin?: string
+): Promise<PortfolioBacktestResponse> {
+  const res = await fetch(`${API_BASE}/analytics/portfolio-backtest`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      allocations,
+      period,
+      benchmark_isin: benchmarkIsin || null,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Error calculant el backtest històric" }));
+    throw new Error(err.detail || "Error calculant el backtest històric");
+  }
+  return res.json();
+}
+
+export async function fetchFundHistory(
+  isin: string,
+  period: string = "max",
+  benchmark?: string
+): Promise<FundHistoryResponse> {
+  let url = `${API_BASE}/funds/${encodeURIComponent(isin)}/history?period=${encodeURIComponent(period)}`;
+  if (benchmark) {
+    url += `&benchmark=${encodeURIComponent(benchmark)}`;
+  }
+  const res = await fetch(url);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Error obtenint l'històric del fons" }));
+    throw new Error(err.detail || "Error obtenint l'històric del fons");
+  }
+  return res.json();
+}
+
+

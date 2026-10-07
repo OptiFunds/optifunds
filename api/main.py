@@ -510,6 +510,31 @@ def get_performance_comparison_1y(isin: str):
         bmk_ret = round(f_ret + 2.5, 2)
 
     alt_ret = round(bmk_ret - 0.15, 2)
+    # Intentar obtenir la sèrie històrica 1Y real de la CNMV
+    try:
+        from modules.historical_engine import get_fund_history
+        hist_1y = get_fund_history(isin_safe, period="1y")
+        if isinstance(hist_1y, dict) and "error" not in hist_1y and len(hist_1y.get("timeline", [])) > 10:
+            # Sèrie real trobada!
+            t_line = hist_1y["timeline"]
+            f_b100 = hist_1y["base100_series"]
+            b_b100 = hist_1y.get("benchmark_base100_series", [])
+            f_actual_ret = hist_1y["metrics"]["total_return_pct"]
+            b_actual_ret = hist_1y.get("benchmark", {}).get("total_return_pct", bmk_ret)
+
+            # Generar alternativa basada en benchmark de baix cost
+            alt_b100 = [round(b * 1.0015, 2) for b in b_b100] if b_b100 else f_b100
+
+            return {
+                "timeline": t_line,
+                "fund": {"name": row["name"], "return_1y": f_actual_ret, "data": f_b100},
+                "benchmark": {"name": hist_1y.get("benchmark", {}).get("name", bmk_label), "return_1y": b_actual_ret, "data": b_b100},
+                "alternative": {"name": alt_label, "return_1y": round(b_actual_ret + 0.1, 2), "data": alt_b100},
+                "is_real_history": True
+            }
+    except Exception:
+        pass
+
     months = [
         "Mes -12", "Mes -11", "Mes -10", "Mes -9", "Mes -8", "Mes -7",
         "Mes -6", "Mes -5", "Mes -4", "Mes -3", "Mes -2", "Mes -1", "Avui"
@@ -534,7 +559,8 @@ def get_performance_comparison_1y(isin: str):
         "timeline": months,
         "fund": {"name": row["name"], "return_1y": f_ret, "data": build_curve(f_ret, f_vol, 0.4)},
         "benchmark": {"name": bmk_label, "return_1y": bmk_ret, "data": build_curve(bmk_ret, f_vol * 0.85, 0.2)},
-        "alternative": {"name": alt_label, "return_1y": alt_ret, "data": build_curve(alt_ret, f_vol * 0.82, 0.2)}
+        "alternative": {"name": alt_label, "return_1y": alt_ret, "data": build_curve(alt_ret, f_vol * 0.82, 0.2)},
+        "is_real_history": False
     }
 
 
@@ -1050,4 +1076,43 @@ def get_portfolio_lookthrough(req: LookthroughRequest):
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Mòdul d'Històric i Backtest Quantitatiu Real (Dècada 2015-2024) ---
+class PortfolioBacktestRequest(BaseModel):
+    allocations: Dict[str, float]
+    period: Optional[str] = "max"
+    benchmark_isin: Optional[str] = None
+
+@app.post("/api/v1/analytics/portfolio-backtest")
+def get_portfolio_backtest_analysis(req: PortfolioBacktestRequest):
+    try:
+        from modules.historical_engine import backtest_portfolio_history
+        res = backtest_portfolio_history(
+            allocations=req.allocations,
+            period=req.period or "max",
+            benchmark_isin=req.benchmark_isin
+        )
+        if isinstance(res, dict) and "error" in res:
+            raise HTTPException(status_code=400, detail=res["error"])
+        return res
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/funds/{isin}/history")
+def get_fund_history_series(isin: str, period: str = "max", benchmark: Optional[str] = None):
+    try:
+        from modules.historical_engine import get_fund_history
+        res = get_fund_history(isin=isin, period=period, benchmark_isin=benchmark)
+        if isinstance(res, dict) and "error" in res:
+            raise HTTPException(status_code=404, detail=res["error"])
+        return res
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 

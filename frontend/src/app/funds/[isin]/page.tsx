@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -12,9 +13,23 @@ import {
   AlertTriangle, 
   Sparkles,
   Download,
-  Layers
+  Layers,
+  Calendar,
+  RefreshCw,
+  TrendingUp,
+  TrendingDown
 } from "lucide-react";
-import { getFundDeepDive, searchFunds, getFundAuditPdfUrl, FundDeepDive, FundSummary } from "@/lib/api";
+import { 
+  getFundDeepDive, 
+  searchFunds, 
+  getFundAuditPdfUrl, 
+  fetchFundHistory,
+  FundDeepDive, 
+  FundSummary,
+  FundHistoryResponse
+} from "@/lib/api";
+
+const Chart = dynamic(() => import("@/components/Chart"), { ssr: false });
 
 export default function FundDetailPage() {
   const params = useParams();
@@ -29,6 +44,12 @@ export default function FundDetailPage() {
 
   const [compareQuery, setCompareQuery] = useState("");
   const [compareResults, setCompareResults] = useState<FundSummary[]>([]);
+
+  // Sèrie Històrica Oficial CNMV
+  const [historyData, setHistoryData] = useState<FundHistoryResponse | null>(null);
+  const [historyPeriod, setHistoryPeriod] = useState<string>("10y");
+  const [historyView, setHistoryView] = useState<"base100" | "nav" | "drawdown">("base100");
+  const [historyLoading, setHistoryLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isin) return;
@@ -45,6 +66,20 @@ export default function FundDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [isin]);
+
+  useEffect(() => {
+    if (!isin) return;
+    setHistoryLoading(true);
+    fetchFundHistory(isin, historyPeriod)
+      .then((res) => {
+        setHistoryData(res);
+      })
+      .catch((err) => {
+        console.warn("Històric no disponible:", err);
+        setHistoryData(null);
+      })
+      .finally(() => setHistoryLoading(false));
+  }, [isin, historyPeriod]);
 
   useEffect(() => {
     if (compareQuery.trim().length >= 2) {
@@ -89,6 +124,164 @@ export default function FundDetailPage() {
       hasAlternatives: alts.length > 0
     };
   }, [data, capital]);
+
+  const historyChartOptions = useMemo(() => {
+    if (!historyData || !historyData.timeline || historyData.timeline.length === 0) return {};
+
+    if (historyView === "drawdown") {
+      return {
+        backgroundColor: "transparent",
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: "#0F172A",
+          borderColor: "#334155",
+          textStyle: { color: "#F8FAFC", fontSize: 11 },
+          valueFormatter: (value: any) => `${value}%`,
+        },
+        grid: { top: "8%", right: "3%", bottom: "12%", left: "4%", containLabel: true },
+        xAxis: {
+          type: "category",
+          boundaryGap: false,
+          data: historyData.timeline,
+          axisLine: { lineStyle: { color: "#CBD5E1" } },
+          axisLabel: { color: "#64748B", fontSize: 10 },
+        },
+        yAxis: {
+          type: "value",
+          max: 0,
+          axisLabel: { color: "#64748B", fontSize: 10, formatter: "{value}%" },
+          splitLine: { lineStyle: { color: "#F1F5F9", type: "dashed" } },
+        },
+        series: [
+          {
+            name: "Drawdown (%)",
+            type: "line",
+            smooth: 0.15,
+            data: historyData.drawdown_series,
+            lineStyle: { width: 2, color: "#EF4444" },
+            itemStyle: { color: "#EF4444" },
+            areaStyle: {
+              color: {
+                type: "linear",
+                x: 0, y: 0, x2: 0, y2: 1,
+                colorStops: [
+                  { offset: 0, color: "rgba(239, 68, 68, 0.05)" },
+                  { offset: 1, color: "rgba(239, 68, 68, 0.35)" }
+                ]
+              }
+            }
+          }
+        ]
+      };
+    }
+
+    if (historyView === "nav") {
+      return {
+        backgroundColor: "transparent",
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: "#0F172A",
+          borderColor: "#334155",
+          textStyle: { color: "#F8FAFC", fontSize: 11 },
+          valueFormatter: (value: any) => `${value} €`,
+        },
+        grid: { top: "8%", right: "3%", bottom: "12%", left: "4%", containLabel: true },
+        xAxis: {
+          type: "category",
+          boundaryGap: false,
+          data: historyData.timeline,
+          axisLine: { lineStyle: { color: "#CBD5E1" } },
+          axisLabel: { color: "#64748B", fontSize: 10 },
+        },
+        yAxis: {
+          type: "value",
+          scale: true,
+          axisLabel: { color: "#64748B", fontSize: 10, formatter: "{value} €" },
+          splitLine: { lineStyle: { color: "#F1F5F9", type: "dashed" } },
+        },
+        series: [
+          {
+            name: "Valor Liquidatiu (NAV)",
+            type: "line",
+            smooth: 0.2,
+            data: historyData.nav_series,
+            lineStyle: { width: 3, color: "#00B050" },
+            itemStyle: { color: "#00B050" },
+            areaStyle: {
+              color: {
+                type: "linear",
+                x: 0, y: 0, x2: 0, y2: 1,
+                colorStops: [
+                  { offset: 0, color: "rgba(0, 176, 80, 0.25)" },
+                  { offset: 1, color: "rgba(0, 176, 80, 0.0)" }
+                ]
+              }
+            }
+          }
+        ]
+      };
+    }
+
+    // Default: Base 100 vs Benchmark
+    return {
+      backgroundColor: "transparent",
+      tooltip: {
+        trigger: "axis",
+        backgroundColor: "#0F172A",
+        borderColor: "#334155",
+        textStyle: { color: "#F8FAFC", fontSize: 11 },
+        valueFormatter: (value: any) => `${value} pts (Base 100)`,
+      },
+      legend: {
+        bottom: 0,
+        textStyle: { color: "#64748B", fontSize: 11 },
+      },
+      grid: { top: "8%", right: "3%", bottom: "14%", left: "4%", containLabel: true },
+      xAxis: {
+        type: "category",
+        boundaryGap: false,
+        data: historyData.timeline,
+        axisLine: { lineStyle: { color: "#CBD5E1" } },
+        axisLabel: { color: "#64748B", fontSize: 10 },
+      },
+      yAxis: {
+        type: "value",
+        scale: true,
+        axisLabel: { color: "#64748B", fontSize: 10 },
+        splitLine: { lineStyle: { color: "#F1F5F9", type: "dashed" } },
+      },
+      series: [
+        {
+          name: `${(historyData.fund.name || "Fons").slice(0, 24)} (${historyData.metrics.total_return_pct >= 0 ? "+" : ""}${historyData.metrics.total_return_pct}%)`,
+          type: "line",
+          smooth: 0.2,
+          data: historyData.base100_series,
+          lineStyle: { width: 3.5, color: "#00B050" },
+          itemStyle: { color: "#00B050" },
+          areaStyle: {
+            color: {
+              type: "linear",
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: "rgba(0, 176, 80, 0.22)" },
+                { offset: 1, color: "rgba(0, 176, 80, 0.0)" }
+              ]
+            }
+          },
+          z: 10
+        },
+        ...(historyData.benchmark_base100_series && historyData.benchmark_base100_series.length > 0 ? [{
+          name: `${(historyData.benchmark?.name || "Benchmark").slice(0, 24)} (${historyData.benchmark?.total_return_pct >= 0 ? "+" : ""}${historyData.benchmark?.total_return_pct ?? 0}%)`,
+          type: "line",
+          smooth: 0.2,
+          data: historyData.benchmark_base100_series,
+          lineStyle: { width: 2, color: "#64748B", type: "dashed" },
+          itemStyle: { color: "#64748B" },
+          z: 5
+        }] : [])
+      ]
+    };
+  }, [historyData, historyView]);
 
   if (loading) {
     return (
@@ -482,6 +675,212 @@ export default function FundDetailPage() {
           </div>
 
         </div>
+
+        {/* SECCIÓ 4.5: EVOLUCIÓ HISTÒRICA OFICIAL CNMV (2015 – 2024) */}
+        {historyData && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 text-[#00B050] border border-emerald-100 uppercase tracking-wider">
+                    Sèrie Diària Oficial CNMV
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">
+                    {historyData.date_range.total_days.toLocaleString()} sessions diàries registrades
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold tracking-tight text-slate-900 mt-1">
+                  Trajectòria Històrica Real & Benchmark
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Preus liquidatius diaris oficials auditats ({historyData.date_range.start} al {historyData.date_range.end})
+                </p>
+              </div>
+
+              {/* SELECTORS */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* SELECTOR HORITZÓ */}
+                <div className="flex rounded-xl bg-slate-100 p-1 text-xs font-semibold">
+                  {[
+                    { id: "1y", label: "1A" },
+                    { id: "3y", label: "3A" },
+                    { id: "5y", label: "5A" },
+                    { id: "10y", label: "10A" },
+                    { id: "max", label: "Màx" },
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setHistoryPeriod(p.id)}
+                      disabled={historyLoading}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        historyPeriod === p.id
+                          ? "bg-white text-slate-900 shadow-2xs font-bold"
+                          : "text-slate-500 hover:text-slate-900"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* SELECTOR VISTA */}
+                <div className="flex rounded-xl border border-slate-200 p-0.5 text-xs">
+                  <button
+                    onClick={() => setHistoryView("base100")}
+                    className={`px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+                      historyView === "base100" ? "bg-slate-900 text-white font-bold" : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    Base 100
+                  </button>
+                  <button
+                    onClick={() => setHistoryView("nav")}
+                    className={`px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+                      historyView === "nav" ? "bg-slate-900 text-white font-bold" : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    NAV (€)
+                  </button>
+                  <button
+                    onClick={() => setHistoryView("drawdown")}
+                    className={`px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+                      historyView === "drawdown" ? "bg-rose-600 text-white font-bold" : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    Drawdown %
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* GRÀFIC */}
+            <div className="relative">
+              {historyLoading && (
+                <div className="absolute inset-0 bg-white/70 backdrop-blur-2xs z-20 flex items-center justify-center">
+                  <div className="flex items-center gap-2 text-xs font-mono text-slate-600 bg-white px-4 py-2 rounded-xl shadow border border-slate-100">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#00B050]" />
+                    <span>Carregant dades històriques CNMV...</span>
+                  </div>
+                </div>
+              )}
+              <Chart option={historyChartOptions} height="350px" />
+            </div>
+
+            {/* BENTO KPIS HISTÒRICS REALS */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-[10px] font-mono uppercase text-slate-400 block">Retorn Acumulat</span>
+                <span className={`text-xl font-extrabold font-mono mt-1 block ${
+                  historyData.metrics.total_return_pct >= 0 ? "text-[#00B050]" : "text-rose-600"
+                }`}>
+                  {historyData.metrics.total_return_pct >= 0 ? "+" : ""}{historyData.metrics.total_return_pct}%
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5 block truncate">
+                  {historyPeriod.toUpperCase()} oficial
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-[10px] font-mono uppercase text-slate-400 block">CAGR Anual</span>
+                <span className="text-xl font-extrabold text-slate-900 font-mono mt-1 block">
+                  {historyData.metrics.cagr_pct >= 0 ? "+" : ""}{historyData.metrics.cagr_pct}%
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">Creixement compost</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-[10px] font-mono uppercase text-slate-400 block">Volatilitat Anual</span>
+                <span className="text-xl font-extrabold text-slate-900 font-mono mt-1 block">
+                  {historyData.metrics.volatility_pct}%
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">Desviació típica 252d</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-rose-50/70 border border-rose-100">
+                <span className="text-[10px] font-mono uppercase text-rose-700 block">Màxim Drawdown</span>
+                <span className="text-xl font-extrabold text-rose-600 font-mono mt-1 block">
+                  {historyData.metrics.max_drawdown_pct}%
+                </span>
+                <span className="text-[10px] text-rose-500 font-mono mt-0.5 block">
+                  Mínim: {historyData.metrics.max_drawdown_date}
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-[10px] font-mono uppercase text-slate-400 block">Sharpe Ratio</span>
+                <span className="text-xl font-extrabold text-slate-900 font-mono mt-1 block">
+                  {historyData.metrics.sharpe_ratio}
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">Calmar: {historyData.metrics.calmar_ratio}</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-100">
+                <span className="text-[10px] font-mono uppercase text-emerald-800 block">Alfa vs Benchmark</span>
+                <span className={`text-xl font-extrabold font-mono mt-1 block ${
+                  (historyData.benchmark?.alpha_annual_pct ?? 0) >= 0 ? "text-[#00B050]" : "text-rose-600"
+                }`}>
+                  {(historyData.benchmark?.alpha_annual_pct ?? 0) >= 0 ? "+" : ""}
+                  {historyData.benchmark?.alpha_annual_pct ?? 0}%
+                </span>
+                <span className="text-[10px] text-emerald-700 mt-0.5 block">
+                  Beta: {historyData.benchmark?.beta ?? 1.0}
+                </span>
+              </div>
+            </div>
+
+            {/* TAULA ANUAL ANY PER ANY */}
+            {historyData.yearly_performance && historyData.yearly_performance.length > 0 && (
+              <div className="pt-2">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-slate-500" />
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      Històric per Anys Naturals (CNMV)
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Tancaments anuals 31 de desembre
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto mt-2">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-[10px] uppercase text-slate-400">
+                        <th className="py-2 px-3">Any</th>
+                        <th className="py-2 px-3 text-right">Rendibilitat Fons</th>
+                        <th className="py-2 px-3 text-right">Rendibilitat Benchmark</th>
+                        <th className="py-2 px-3 text-right">Diferencial (Alfa)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {historyData.yearly_performance.map((yr) => (
+                        <tr key={yr.year} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-2 px-3 font-bold text-slate-900">{yr.year}</td>
+                          <td className={`py-2 px-3 text-right font-bold ${
+                            yr.fund_return_pct >= 0 ? "text-emerald-700" : "text-rose-600"
+                          }`}>
+                            {yr.fund_return_pct >= 0 ? "+" : ""}{yr.fund_return_pct}%
+                          </td>
+                          <td className="py-2 px-3 text-right text-slate-500">
+                            {yr.benchmark_return_pct !== null ? `${yr.benchmark_return_pct >= 0 ? "+" : ""}${yr.benchmark_return_pct}%` : "—"}
+                          </td>
+                          <td className={`py-2 px-3 text-right font-bold ${
+                            yr.excess_return_pct !== null
+                              ? yr.excess_return_pct >= 0 ? "text-[#00B050]" : "text-rose-600"
+                              : "text-slate-400"
+                          }`}>
+                            {yr.excess_return_pct !== null ? `${yr.excess_return_pct >= 0 ? "+" : ""}${yr.excess_return_pct}%` : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 5. TAULA DE POSICIONS PRINCIPALS (LOOK-THROUGH) */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-4">

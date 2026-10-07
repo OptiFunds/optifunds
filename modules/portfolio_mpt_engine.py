@@ -192,8 +192,8 @@ def optimize_portfolio_mpt(allocations: dict[str, float]):
         })
 
     weighted_ind_vol = sum(user_weights[i] * ind_vols[instruments[i]] for i in range(num_assets))
-    diversification_gain = round((weighted_ind_vol - u_vol) * 100, 2)
-    diversification_ratio = round(weighted_ind_vol / u_vol, 2) if u_vol > 0 else 1.0
+    diversification_gain = round(float((weighted_ind_vol - u_vol) * 100), 2)
+    diversification_ratio = round(float(weighted_ind_vol / u_vol), 2) if u_vol > 0 else 1.0
 
     return {
         "user_portfolio": {
