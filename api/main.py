@@ -946,7 +946,7 @@ def optimize_fund_endpoint(req: OptimizeRequest):
     return result
 
 @app.get("/api/v1/funds/compare-pairwise")
-def compare_funds_pairwise(f1: str, f2: str):
+def compare_funds_pairwise(f1: str, f2: str, period: str = "10y"):
     con = duckdb.connect()
     m_path = DATA_DIR / "optifunds_master_spain.parquet"
     h_path = DATA_DIR / "optifunds_holdings_spain.parquet"
@@ -1040,12 +1040,24 @@ def compare_funds_pairwise(f1: str, f2: str):
         shared_list = []
 
     con.close()
+
+    # Sèrie històrica real CNMV cara a cara
+    hist_comp = None
+    try:
+        from modules.historical_engine import compare_funds_pairwise_history
+        h_res = compare_funds_pairwise_history(f1, f2, period=period)
+        if isinstance(h_res, dict) and "error" not in h_res:
+            hist_comp = h_res
+    except Exception as e:
+        print("Error calculant historial cara a cara:", e)
+
     return {
         "fund1": fund1,
         "fund2": fund2,
         "total_overlap": total_overlap,
         "active_share": round(max(0.0, 100.0 - total_overlap), 2) if total_overlap > 0 else None,
-        "shared_holdings": shared_list
+        "shared_holdings": shared_list,
+        "historical_comparison": hist_comp
     }
 
 

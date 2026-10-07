@@ -522,3 +522,196 @@ def backtest_portfolio_history(
         "benchmark_base100_series": bmk_b100_vals,
         "yearly_performance": yearly_rows
     }
+
+
+def compare_funds_pairwise_history(
+    isin1: str,
+    isin2: str,
+    period: str = "max"
+) -> dict:
+    """
+    Compara dues sèries temporals reals de NAV oficial de la CNMV cara a cara.
+    Calcula correlació històrica real, trajectòria Base 100, drawdown i diferencial en euros.
+    """
+    if not NAV_PARQUET.exists():
+        return {"error": "Fitxer històric de NAV no trobat."}
+
+    con = duckdb.connect()
+    m1 = resolve_fund_metadata(con, isin1)
+    m2 = resolve_fund_metadata(con, isin2)
+    id1, id2 = m1["isin"], m2["isin"]
+
+    q = f"""
+        SELECT 
+            instrument,
+            CAST(date AS DATE) AS date,
+            CAST(nav AS DOUBLE) AS nav
+        FROM read_parquet('{NAV_PARQUET}')
+        WHERE instrument IN ('{id1}', '{id2}')
+          AND nav > 0
+        ORDER BY date ASC
+    """
+    df_raw = con.execute(q).df()
+    con.close()
+
+    if df_raw.empty:
+        return {"error": "No s'han trobat cotitzacions per a cap dels dos fons."}
+
+    pivot = df_raw.pivot(index="date", columns="instrument", values="nav")
+    
+    # Comprovar presència de tots dos
+    has_1 = id1 in pivot.columns and not pivot[id1].dropna().empty
+    has_2 = id2 in pivot.columns and not pivot[id2].dropna().empty
+
+    if not has_1 and not has_2:
+        return {"error": f"Cap dels dos fons ({isin1}, {isin2}) té sèrie històrica a la base de dades."}
+    if not has_1:
+        return {"error": f"El fons 1 ({isin1}) no té sèrie històrica a la base de dades."}
+    if not has_2:
+        return {"error": f"El fons 2 ({isin2}) no té sèrie històrica a la base de dades."}
+
+    # Alinear dates comunes
+    sub_pivot = pivot[[id1, id2]].ffill().bfill().dropna()
+    if len(sub_pivot) < 20:
+        return {"error": "Sèrie temporal comuna massa curta entre aquests dos fons."}
+
+    latest_date = sub_pivot.index.max()
+    if period == "1y":
+        start_filter = latest_date - pd.DateOffset(years=1)
+    elif period == "3y":
+        start_filter = latest_date - pd.DateOffset(years=3)
+    elif period == "5y":
+        start_filter = latest_date - pd.DateOffset(years=5)
+    elif period == "10y":
+        start_filter = latest_date - pd.DateOffset(years=10)
+    else:
+        start_filter = sub_pivot.index.min()
+
+    sub_pivot = sub_pivot[sub_pivot.index >= start_filter]
+    if len(sub_pivot) < 10:
+        return {"error": "Dades insuficients en el rang temporal sol·licitat."}
+
+    p1 = sub_pivot[id1]
+    p2 = sub_pivot[id2]
+
+    # Base 100
+    b100_1 = (p1 / p1.iloc[0]) * 100.0
+    b100_2 = (p2 / p2.iloc[0]) * 100.0
+
+    # Drawdowns
+    dd1 = (p1 - p1.cummax()) / p1.cummax() * 100.0
+    dd2 = (p2 - p2.cummax()) / p2.cummax() * 100.0
+
+    # Mètriques quantitatives
+    years = max(0.1, (sub_pivot.index[-1] - sub_pivot.index[0]).days / 365.25)
+    
+    ret1 = float(((p1.iloc[-1] / p1.iloc[0]) - 1.0) * 100.0)
+    ret2 = float(((p2.iloc[-1] / p2.iloc[0]) - 1.0) * 100.0)
+
+    cagr1 = float(((p1.iloc[-1] / p1.iloc[0]) ** (1.0 / years) - 1.0) * 100.0)
+    cagr2 = float(((p2.iloc[-1] / p2.iloc[0]) ** (1.0 / years) - 1.0) * 100.0)
+
+    pct1 = p1.pct_change().dropna()
+    pct2 = p2.pct_change().dropna()
+
+    vol1 = float(pct1.std() * np.sqrt(TRADING_DAYS) * 100.0)
+    vol2 = float(pct2.std() * np.sqrt(TRADING_DAYS) * 100.0)
+
+    sharpe1 = float((cagr1 - (RF_RATE * 100.0)) / vol1) if vol1 > 0 else 0.0
+    sharpe2 = float((cagr2 - (RF_RATE * 100.0)) / vol2) if vol2 > 0 else 0.0
+
+    corr = float(pct1.corr(pct2)) if len(pct1) > 10 else 1.0
+
+    # Simulació de capital en 10.000 €
+    cap1_10k = round(10000.0 * (1.0 + ret1 / 100.0), 2)
+    cap2_10k = round(10000.0 * (1.0 + ret2 / 100.0), 2)
+    diff_10k = round(cap2_10k - cap1_10k, 2)
+
+    ter1 = m1.get("ter", 1.5)
+    ter2 = m2.get("ter", 0.3)
+    ter_diff_annual = round(10000.0 * (abs(ter1 - ter2) / 100.0), 2)
+
+    # Downsampling
+    step = max(1, len(sub_pivot) // 350)
+    sampled_idx = sub_pivot.index[::step]
+    if sub_pivot.index[-1] not in sampled_idx:
+        sampled_idx = sampled_idx.union(pd.DatetimeIndex([sub_pivot.index[-1]]))
+
+    timeline_str = [d.strftime("%Y-%m-%d") for d in sampled_idx]
+    s_b1 = [round(float(b100_1.asof(d)), 2) for d in sampled_idx]
+    s_b2 = [round(float(b100_2.asof(d)), 2) for d in sampled_idx]
+    s_dd1 = [round(float(dd1.asof(d)), 2) for d in sampled_idx]
+    s_dd2 = [round(float(dd2.asof(d)), 2) for d in sampled_idx]
+
+    # Diferencial Base 100 (Fons 2 - Fons 1)
+    spread_series = [round(s2 - s1, 2) for s1, s2 in zip(s_b1, s_b2)]
+
+    # Taula anual
+    yearly_rows = []
+    years_present = sorted(list(set(sub_pivot.index.year)))
+    for yr in years_present:
+        yr_idx = sub_pivot.index[sub_pivot.index.year == yr]
+        if len(yr_idx) >= 10:
+            y_r1 = float(((p1.asof(yr_idx[-1]) / p1.asof(yr_idx[0])) - 1.0) * 100.0)
+            y_r2 = float(((p2.asof(yr_idx[-1]) / p2.asof(yr_idx[0])) - 1.0) * 100.0)
+            yearly_rows.append({
+                "year": yr,
+                "fund1_return_pct": round(y_r1, 2),
+                "fund2_return_pct": round(y_r2, 2),
+                "spread_return_pct": round(y_r2 - y_r1, 2)
+            })
+
+    return {
+        "period": period,
+        "date_range": {
+            "start": sub_pivot.index[0].strftime("%Y-%m-%d"),
+            "end": sub_pivot.index[-1].strftime("%Y-%m-%d"),
+            "total_days": len(sub_pivot)
+        },
+        "fund1": {
+            "isin": id1,
+            "name": m1["name"],
+            "category": m1["category"],
+            "ter": ter1,
+            "metrics": {
+                "total_return_pct": round(ret1, 2),
+                "cagr_pct": round(cagr1, 2),
+                "volatility_pct": round(vol1, 2),
+                "sharpe_ratio": round(sharpe1, 2),
+                "max_drawdown_pct": round(float(dd1.min()), 2),
+                "max_drawdown_date": str(dd1.idxmin().strftime("%Y-%m-%d"))
+            }
+        },
+        "fund2": {
+            "isin": id2,
+            "name": m2["name"],
+            "category": m2["category"],
+            "ter": ter2,
+            "metrics": {
+                "total_return_pct": round(ret2, 2),
+                "cagr_pct": round(cagr2, 2),
+                "volatility_pct": round(vol2, 2),
+                "sharpe_ratio": round(sharpe2, 2),
+                "max_drawdown_pct": round(float(dd2.min()), 2),
+                "max_drawdown_date": str(dd2.idxmin().strftime("%Y-%m-%d"))
+            }
+        },
+        "comparison": {
+            "correlation": round(corr, 3),
+            "spread_total_return_pct": round(ret2 - ret1, 2),
+            "spread_cagr_pct": round(cagr2 - cagr1, 2),
+            "capital_10k_fund1": cap1_10k,
+            "capital_10k_fund2": cap2_10k,
+            "difference_10k_euros": diff_10k,
+            "ter_differential_annual_10k": ter_diff_annual,
+            "is_closet_clone": bool(corr >= 0.90 and abs(ter1 - ter2) >= 0.8)
+        },
+        "timeline": timeline_str,
+        "fund1_base100": s_b1,
+        "fund2_base100": s_b2,
+        "fund1_drawdown": s_dd1,
+        "fund2_drawdown": s_dd2,
+        "spread_series": spread_series,
+        "yearly_performance": yearly_rows
+    }
+

@@ -85,12 +85,72 @@ export interface SharedHoldingPairwise {
   overlap_weight: number;
 }
 
+export interface HistoricalComparisonData {
+  period: string;
+  date_range: {
+    start: string;
+    end: string;
+    total_days: number;
+  };
+  fund1: {
+    isin: string;
+    name: string;
+    category: string;
+    ter: number;
+    metrics: {
+      total_return_pct: number;
+      cagr_pct: number;
+      volatility_pct: number;
+      sharpe_ratio: number;
+      max_drawdown_pct: number;
+      max_drawdown_date: string;
+    };
+  };
+  fund2: {
+    isin: string;
+    name: string;
+    category: string;
+    ter: number;
+    metrics: {
+      total_return_pct: number;
+      cagr_pct: number;
+      volatility_pct: number;
+      sharpe_ratio: number;
+      max_drawdown_pct: number;
+      max_drawdown_date: string;
+    };
+  };
+  comparison: {
+    correlation: number;
+    spread_total_return_pct: number;
+    spread_cagr_pct: number;
+    capital_10k_fund1: number;
+    capital_10k_fund2: number;
+    difference_10k_euros: number;
+    ter_differential_annual_10k: number;
+    is_closet_clone: boolean;
+  };
+  timeline: string[];
+  fund1_base100: number[];
+  fund2_base100: number[];
+  fund1_drawdown: number[];
+  fund2_drawdown: number[];
+  spread_series: number[];
+  yearly_performance: Array<{
+    year: number;
+    fund1_return_pct: number;
+    fund2_return_pct: number;
+    spread_return_pct: number;
+  }>;
+}
+
 export interface PairwiseComparisonData {
   fund1: FundPairwiseInfo;
   fund2: FundPairwiseInfo;
   total_overlap: number;
   active_share: number | null;
   shared_holdings: SharedHoldingPairwise[];
+  historical_comparison?: HistoricalComparisonData | null;
 }
 
 export interface RiskReturnPoint {
@@ -371,8 +431,8 @@ export async function fetchPortfolioLookthrough(allocations: Record<string, numb
 // ==========================================
 // 6. FUNCIONS COMPLEMENTÀRIES (PAIRWISE, RISC-RETORN, OPTIMITZACIÓ)
 // ==========================================
-export async function getPairwiseComparison(f1: string, f2: string): Promise<PairwiseComparisonData> {
-  const res = await fetch(`${API_BASE}/funds/compare-pairwise?f1=${encodeURIComponent(f1)}&f2=${encodeURIComponent(f2)}`);
+export async function getPairwiseComparison(f1: string, f2: string, period: string = "10y"): Promise<PairwiseComparisonData> {
+  const res = await fetch(`${API_BASE}/funds/compare-pairwise?f1=${encodeURIComponent(f1)}&f2=${encodeURIComponent(f2)}&period=${encodeURIComponent(period)}`);
   if (!res.ok) throw new Error("Error comparant els dos fons");
   return res.json();
 }
