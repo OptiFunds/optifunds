@@ -107,6 +107,62 @@ def get_database_stats():
     return {"funds_count": funds, "holdings_count": holdings}
 
 
+@app.get("/api/v1/analytics/sync-status")
+def get_sync_status():
+    status_file = DATA_DIR / "cnmv_sync_status.json"
+    nav_path = DATA_DIR / "optifunds_nav_history.parquet"
+    
+    file_status = {}
+    if status_file.exists():
+        try:
+            import json
+            with open(status_file, "r", encoding="utf-8") as f:
+                file_status = json.load(f)
+        except Exception:
+            pass
+            
+    db_stats = {
+        "total_records": 0,
+        "total_funds": 0,
+        "min_date": None,
+        "max_date": None,
+        "completed_months": 0
+    }
+    
+    if nav_path.exists():
+        try:
+            con = duckdb.connect()
+            row = con.execute(f"""
+                SELECT 
+                    COUNT(*), 
+                    COUNT(DISTINCT instrument), 
+                    MIN(date), 
+                    MAX(date)
+                FROM read_parquet('{nav_path}')
+            """).fetchone()
+            
+            months_count = con.execute(f"""
+                SELECT COUNT(DISTINCT strftime(date, '%Y-%m'))
+                FROM read_parquet('{nav_path}')
+                GROUP BY strftime(date, '%Y-%m')
+                HAVING COUNT(DISTINCT instrument) >= 1000
+            """).fetchall()
+            
+            db_stats["total_records"] = int(row[0]) if row else 0
+            db_stats["total_funds"] = int(row[1]) if row else 0
+            db_stats["min_date"] = str(row[2]) if row and row[2] else None
+            db_stats["max_date"] = str(row[3]) if row and row[3] else None
+            db_stats["completed_months"] = len(months_count)
+            con.close()
+        except Exception as e:
+            db_stats["error"] = str(e)
+            
+    return {
+        "sync_info": file_status,
+        "database_stats": db_stats
+    }
+
+
 @app.get("/api/v1/funds/search")
 def search_funds(q: str = ""):
     m_path = DATA_DIR / "optifunds_master_spain.parquet"

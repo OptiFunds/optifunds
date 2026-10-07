@@ -1,0 +1,93 @@
+name: Sincronització Mensual Automàtica CNMV
+
+on:
+  schedule:
+    # Executa el dia 5 de cada mes a les 04:00 UTC (quan la CNMV publica les dades del mes anterior)
+    - cron: '0 4 5 * *'
+    # Execució de seguretat cada dilluns a les 04:00 UTC per a qualsevol publicació amb retard
+    - cron: '0 4 * * 1'
+
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Forçar re-descàrrega de tots els mesos'
+        required: false
+        type: boolean
+        default: false
+      check_only:
+        description: 'Només comprovar mesos pendents (dry-run)'
+        required: false
+        type: boolean
+        default: false
+      max_months:
+        description: 'Nombre màxim de mesos a descarregar (buit = tots els pendents)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  sync_cnmv_data:
+    name: Descàrrega i Ingesta de NAVs Oficials CNMV
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout del repositori
+        uses: actions/checkout@v4
+
+      - name: Configuració de Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instal·lació de dependències
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Execució de la sincronització mensual incremental
+        id: sync
+        run: |
+          ARGS=""
+          if [ "${{ inputs.force }}" = "true" ]; then
+            ARGS="$ARGS --force"
+          fi
+          if [ "${{ inputs.check_only }}" = "true" ]; then
+            ARGS="$ARGS --check-only"
+          fi
+          if [ -n "${{ inputs.max_months }}" ]; then
+            ARGS="$ARGS --max-months ${{ inputs.max_months }}"
+          fi
+
+          echo "Executant: python scripts/update_cnmv_monthly.py $ARGS --pace 2.0"
+          python scripts/update_cnmv_monthly.py $ARGS --pace 2.0
+
+      - name: Generació de Resum d'Execució a GitHub Actions
+        if: always()
+        run: |
+          echo "## 📊 Estat de la Sincronització CNMV" >> $GITHUB_STEP_SUMMARY
+          if [ -f "data/cnmv_sync_status.json" ]; then
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat data/cnmv_sync_status.json >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No s'ha generat fitxer d'estat." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Commit i Push dels Nous Parquets a GitHub
+        if: inputs.check_only != true
+        run: |
+          git status --porcelain
+          if [ -n "$(git status --porcelain data/)" ]; then
+            echo "S'han detectat dades noves. Fent commit i push..."
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add data/optifunds_nav_history.parquet data/optifunds_screener_master.parquet data/cnmv_sync_status.json
+            git commit -m "chore(data): auto-update CNMV monthly NAVs [skip ci]"
+            git push
+            echo "✓ Dades publicades al repositori amb èxit."
+          else
+            echo "No hi ha canvis a les dades. La base de dades ja estava al dia."
+          fi

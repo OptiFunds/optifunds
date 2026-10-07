@@ -5,3 +5,5 @@ plotly
 fpdf2
 duckdb
 pyarrow
+fastapi
+uvicorn
