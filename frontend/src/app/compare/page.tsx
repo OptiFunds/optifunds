@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Chart from "@/components/Chart";
 import { getPairwiseComparison, PairwiseComparisonData } from "@/lib/api";
+import { FundSearchSelect } from "@/components/FundSearchSelect";
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -19,6 +20,29 @@ import {
   Calendar,
   RefreshCw
 } from "lucide-react";
+
+const POPULAR_COMPARISON_PRESETS = [
+  {
+    label: "Kutxabank Bolsa vs Acción IBEX 35 ETF",
+    f1: "ES0114388038",
+    f2: "ES0105336038",
+  },
+  {
+    label: "Santander Small Caps vs Bindex España",
+    f1: "ES0175224031",
+    f2: "ES0114573001",
+  },
+  {
+    label: "ING Fondo Naranja S&P 500 vs Bindex España",
+    f1: "ES0152769032",
+    f2: "ES0114573001",
+  },
+  {
+    label: "Bestinver Internacional vs Kutxabank Bolsa",
+    f1: "ES0114638036",
+    f2: "ES0114388038",
+  },
+];
 
 function CompareContent() {
   const searchParams = useSearchParams();
@@ -47,6 +71,24 @@ function CompareContent() {
         .finally(() => setLoading(false));
     }
   }, [f1Param, f2Param]);
+
+  const handleSelectFund1 = (newIsin: string) => {
+    if (newIsin === f2Param) return;
+    router.push(`/compare?f1=${encodeURIComponent(newIsin)}&f2=${encodeURIComponent(f2Param)}`);
+  };
+
+  const handleSelectFund2 = (newIsin: string) => {
+    if (newIsin === f1Param) return;
+    router.push(`/compare?f1=${encodeURIComponent(f1Param)}&f2=${encodeURIComponent(newIsin)}`);
+  };
+
+  const handleSwapFunds = () => {
+    router.push(`/compare?f1=${encodeURIComponent(f2Param)}&f2=${encodeURIComponent(f1Param)}`);
+  };
+
+  const handleSelectPreset = (p1: string, p2: string) => {
+    router.push(`/compare?f1=${encodeURIComponent(p1)}&f2=${encodeURIComponent(p2)}`);
+  };
 
   const handlePeriodChange = async (newPeriod: string) => {
     setComparePeriod(newPeriod);
@@ -311,7 +353,7 @@ function CompareContent() {
     };
   }, [data]);
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="p-16 text-center text-xs font-mono text-slate-500 max-w-5xl mx-auto">
         Executant creuament de carteres i mètriques a DuckDB...
@@ -378,94 +420,164 @@ function CompareContent() {
           </div>
         </div>
 
-        {/* Targetes dels dos fons cara a cara */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        {/* Fons 1 */}
-        <div className="bg-white border-2 border-blue-200/80 rounded-2xl p-6 shadow-xs space-y-4 relative">
-          <div className="flex justify-between items-start gap-2">
-            <div>
-              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200">
-                Fons A (Original)
-              </span>
-              <h2 className="text-base font-bold text-slate-900 mt-2">{fund1.fund_name}</h2>
-              <span className="text-xs font-mono text-slate-400">ISIN: {fund1.isin}</span>
-            </div>
-            <Link
-              href={`/optimize?fund=${encodeURIComponent(fund1.isin)}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors shrink-0"
-              title="Trobar alternatives indexades a l'Smart Switch"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Smart Switch</span>
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
-            <div>
-              <span className="text-slate-400 block text-[11px]">Comissió TER:</span>
-              <span className="font-mono font-bold text-slate-900 text-base">{fmtPct(fund1.ter)}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[11px]">Retorn 1 Any:</span>
-              <span className={`font-mono font-bold text-base ${(fund1.return_1y ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                {fmtPct(fund1.return_1y, true)}
-              </span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[11px]">Volatilitat (3Y):</span>
-              <span className="font-mono font-semibold text-slate-800">{fmtPct(fund1.volatility)}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[11px]">Sharpe Ratio:</span>
-              <span className="font-mono font-semibold text-slate-800">{fmtNum(fund1.sharpe)}</span>
-            </div>
-          </div>
+        {/* BARRA DE COMPARATIVES RÀPIDES POPULARS */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
+          <span className="text-slate-400 font-semibold shrink-0 flex items-center gap-1.5 uppercase text-[10px] tracking-wider font-mono">
+            <Sparkles className="w-3.5 h-3.5 text-[#00B050]" />
+            Comparatives Clau:
+          </span>
+          {POPULAR_COMPARISON_PRESETS.map((p) => {
+            const isActive =
+              (f1Param === p.f1 && f2Param === p.f2) || (f1Param === p.f2 && f2Param === p.f1);
+            return (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => handleSelectPreset(p.f1, p.f2)}
+                className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition cursor-pointer ${
+                  isActive
+                    ? "bg-slate-900 text-white font-semibold shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200/90"
+                }`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Fons 2 */}
-        <div className="bg-white border-2 border-emerald-300 rounded-2xl p-6 shadow-xs space-y-4 relative">
-          <div className="flex justify-between items-start gap-2">
-            <div>
-              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-bold border border-emerald-200 flex items-center gap-1 w-fit">
-                <Sparkles className="w-3 h-3 text-emerald-600" /> Fons B (Alternativa)
-              </span>
-              <h2 className="text-base font-bold text-slate-900 mt-2">{fund2.fund_name}</h2>
-              <span className="text-xs font-mono text-slate-400">ISIN: {fund2.isin}</span>
-            </div>
-            <Link
-              href={`/funds/${fund2.isin}`}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition-colors shrink-0"
-              title="Veure fitxa detallada del vehicle"
+        {/* Targetes dels dos fons cara a cara amb selectors dinàmics */}
+        <div className="relative">
+          {/* Botó flotant central d'intercanvi en escriptori */}
+          <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+            <button
+              type="button"
+              onClick={handleSwapFunds}
+              title="Intercanviar Fons (Fons A ⇄ Fons B)"
+              className="p-3 rounded-full bg-white border-2 border-slate-200 text-slate-600 hover:text-[#00B050] hover:border-[#00B050] shadow-md transition-all hover:scale-110 active:scale-95 cursor-pointer"
             >
-              <span>Fitxa Fons</span>
-              <ArrowRight className="w-3 h-3" />
-            </Link>
+              <ArrowLeftRight className="w-4 h-4" />
+            </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
-            <div>
-              <span className="text-slate-400 block text-[11px]">Comissió TER:</span>
-              <span className="font-mono font-bold text-emerald-700 text-base">{fmtPct(fund2.ter)}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+            {/* Overlay suau si s'està recarregant un canvi de fons */}
+            {loading && data && (
+              <div className="absolute inset-0 bg-white/70 backdrop-blur-2xs z-30 flex items-center justify-center rounded-2xl">
+                <div className="flex items-center gap-2 text-xs font-mono text-slate-700 bg-white px-4 py-2 rounded-xl shadow-md border border-slate-200">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#00B050]" />
+                  <span>Actualitzant comparativa...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Fons 1 */}
+            <div className="bg-white border-2 border-blue-200/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 relative">
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <FundSearchSelect
+                    label="Fons A"
+                    badgeText="Fons A (Original / Bancari)"
+                    currentIsin={fund1.isin}
+                    currentName={fund1.fund_name}
+                    currentTer={fund1.ter}
+                    accentColor="blue"
+                    onSelect={handleSelectFund1}
+                    disabledIsin={fund2.isin}
+                  />
+                </div>
+                <Link
+                  href={`/optimize?fund=${encodeURIComponent(fund1.isin)}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors shrink-0 mt-6"
+                  title="Trobar alternatives indexades a l'Smart Switch"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Smart Switch</span>
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Comissió TER:</span>
+                  <span className="font-mono font-bold text-slate-900 text-base">{fmtPct(fund1.ter)}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Retorn 1 Any:</span>
+                  <span className={`font-mono font-bold text-base ${(fund1.return_1y ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    {fmtPct(fund1.return_1y, true)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Volatilitat (3Y):</span>
+                  <span className="font-mono font-semibold text-slate-800">{fmtPct(fund1.volatility)}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Sharpe Ratio:</span>
+                  <span className="font-mono font-semibold text-slate-800">{fmtNum(fund1.sharpe)}</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="text-slate-400 block text-[11px]">Retorn 1 Any:</span>
-              <span className={`font-mono font-bold text-base ${(fund2.return_1y ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                {fmtPct(fund2.return_1y, true)}
-              </span>
+
+            {/* Fons 2 */}
+            <div className="bg-white border-2 border-emerald-300 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 relative">
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <FundSearchSelect
+                    label="Fons B"
+                    badgeText="Fons B (Alternativa / Indexat)"
+                    currentIsin={fund2.isin}
+                    currentName={fund2.fund_name}
+                    currentTer={fund2.ter}
+                    accentColor="emerald"
+                    onSelect={handleSelectFund2}
+                    disabledIsin={fund1.isin}
+                  />
+                </div>
+                <Link
+                  href={`/funds/${fund2.isin}`}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition-colors shrink-0 mt-6"
+                  title="Veure fitxa detallada del vehicle"
+                >
+                  <span className="hidden sm:inline">Fitxa Fons</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Comissió TER:</span>
+                  <span className="font-mono font-bold text-emerald-700 text-base">{fmtPct(fund2.ter)}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Retorn 1 Any:</span>
+                  <span className={`font-mono font-bold text-base ${(fund2.return_1y ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    {fmtPct(fund2.return_1y, true)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Volatilitat (3Y):</span>
+                  <span className="font-mono font-semibold text-slate-800">{fmtPct(fund2.volatility)}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Sharpe Ratio:</span>
+                  <span className="font-mono font-semibold text-emerald-700">{fmtNum(fund2.sharpe)}</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="text-slate-400 block text-[11px]">Volatilitat (3Y):</span>
-              <span className="font-mono font-semibold text-slate-800">{fmtPct(fund2.volatility)}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[11px]">Sharpe Ratio:</span>
-              <span className="font-mono font-semibold text-emerald-700">{fmtNum(fund2.sharpe)}</span>
-            </div>
+          </div>
+
+          {/* Botó d'intercanvi en mòbil */}
+          <div className="flex md:hidden justify-center mt-3">
+            <button
+              type="button"
+              onClick={handleSwapFunds}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition cursor-pointer"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5 text-[#00B050]" />
+              <span>Intercanviar Fons (A ⇄ B)</span>
+            </button>
           </div>
         </div>
-
-      </div>
 
       {/* Targeta de Similitud i Solapament */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
