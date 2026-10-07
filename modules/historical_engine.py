@@ -622,6 +622,33 @@ def compare_funds_pairwise_history(
 
     corr = float(pct1.corr(pct2)) if len(pct1) > 10 else 1.0
 
+    # Mètriques avançades de risc i eficiència
+    cov12 = float(np.cov(pct1, pct2)[0][1]) if len(pct1) > 20 else 0.0
+    var2 = float(np.var(pct2)) if len(pct2) > 20 else 0.0
+    beta1 = float(cov12 / var2) if var2 > 0 else 1.0
+
+    # Alpha anualitzat de Fons 1 respecte a Fons 2 (CAPM Alpha)
+    alpha1 = float((cagr1 - RF_RATE * 100.0) - beta1 * (cagr2 - RF_RATE * 100.0))
+
+    # Tracking Error i Information Ratio
+    diff_pct = (pct1 - pct2).dropna()
+    tracking_error = float(diff_pct.std() * np.sqrt(TRADING_DAYS) * 100.0) if len(diff_pct) > 20 else 0.0
+    information_ratio = float((cagr1 - cagr2) / tracking_error) if tracking_error > 0.01 else 0.0
+
+    # Downside deviation i Ràtio Sortino
+    down1 = pct1[pct1 < 0]
+    down2 = pct2[pct2 < 0]
+    down_vol1 = float(down1.std() * np.sqrt(TRADING_DAYS) * 100.0) if len(down1) > 5 else vol1
+    down_vol2 = float(down2.std() * np.sqrt(TRADING_DAYS) * 100.0) if len(down2) > 5 else vol2
+    sortino1 = float((cagr1 - (RF_RATE * 100.0)) / down_vol1) if down_vol1 > 0 else 0.0
+    sortino2 = float((cagr2 - (RF_RATE * 100.0)) / down_vol2) if down_vol2 > 0 else 0.0
+
+    # Ràtio Calmar (CAGR / |MaxDD|)
+    max_dd1 = abs(float(dd1.min()))
+    max_dd2 = abs(float(dd2.min()))
+    calmar1 = float(cagr1 / max_dd1) if max_dd1 > 0 else 0.0
+    calmar2 = float(cagr2 / max_dd2) if max_dd2 > 0 else 0.0
+
     # Simulació de capital en 10.000 €
     cap1_10k = round(10000.0 * (1.0 + ret1 / 100.0), 2)
     cap2_10k = round(10000.0 * (1.0 + ret2 / 100.0), 2)
@@ -630,6 +657,97 @@ def compare_funds_pairwise_history(
     ter1 = m1.get("ter", 1.5)
     ter2 = m2.get("ter", 0.3)
     ter_diff_annual = round(10000.0 * (abs(ter1 - ter2) / 100.0), 2)
+    ter_diff = ter1 - ter2
+    cagr_diff = cagr2 - cagr1
+
+    # Veredicte Executiu Fiduciari Intel·ligent
+    is_closet = bool(corr >= 0.88 and ter_diff >= 0.5)
+
+    if is_closet:
+        v_type = "closet_indexing"
+        v_badge = "⚠️ Clon Bancari Car (Closet Indexing)"
+        v_title = f"{m1['name']} replica la dinàmica de {m2['name']} amb comissions desproporcionades"
+        v_summary = (
+            f"Amb una correlació històrica del {corr * 100:.1f}% i una Beta de {beta1:.2f}, el Fons A "
+            f"es comporta essencialment com a clon del vehicle comparat. Cobra un +{ter_diff:.2f}% anual "
+            f"més de comissió (TER {ter1:.2f}% vs {ter2:.2f}%), fet que ha generat una pèrdua de {diff_10k:,.0f} € per cada 10.000 € invertits."
+        )
+        v_recommendation = (
+            f"Traspàs fiduciari altament recomanat cap a {m2['name']} per eliminar comissions innecessàries "
+            f"amb un estalvi directe de {ter_diff_annual:,.0f} €/any per cada 10k €."
+        )
+        v_bullets = [
+            f"Correlació d'alta intensitat: {corr * 100:.1f}% (trajectòries de preus paral·leles)",
+            f"Comissió de gestió: +{ter_diff:.2f}% més car cada any a Fons A",
+            f"Diferencial econòmic acumulat: +{diff_10k:,.0f} € a favor de Fons B (base 10k €)",
+            f"Alpha del gestor: {alpha1:.2f}% anual (no justifica el sobrecost de gestió)"
+        ]
+    elif corr >= 0.80 and cagr_diff > 1.0:
+        v_type = "fee_inefficiency"
+        v_badge = "📉 Ineficiència per Costos de Gestió"
+        v_title = f"{m2['name']} supera a {m1['name']} per major eficiència de costos"
+        v_summary = (
+            f"Ambdós fons operen en el mateix segment de mercat (correlació {corr * 100:.1f}%), però {m2['name']} "
+            f"aconsegueix un creixement anualitzat superior (+{cagr_diff:.2f}% CAGR) gràcies al menor desgast de comissions."
+        )
+        v_recommendation = f"Optimització recomanada cap a {m2['name']} per accelerar l'interès compost del patrimoni."
+        v_bullets = [
+            f"Rendibilitat anualitzada: {cagr2:.2f}% (Fons B) vs {cagr1:.2f}% (Fons A)",
+            f"Volatilitat controlada: {vol2:.2f}% vs {vol1:.2f}%",
+            f"Tracking Error moderat: {tracking_error:.2f}%"
+        ]
+    elif corr < 0.70:
+        v_type = "diversification"
+        v_badge = "🛡️ Vehicles Complementaris / Descorrelacionats"
+        v_title = "Ambdós vehicles aporten fonts de rendibilitat i risc independents"
+        v_summary = (
+            f"La baixa correlació ({corr * 100:.1f}%) i un Tracking Error del {tracking_error:.2f}% demostren que "
+            f"no són productes substitutius directes. Cadascun respon a cicles i factors de mercat diferenciats."
+        )
+        v_recommendation = "Combinar ambdós vehicles en una cartera multi-actiu aporta diversificació real."
+        v_bullets = [
+            f"Correlació reduïda: {corr * 100:.1f}% (risc descorrelacionat)",
+            f"Max Drawdown: {abs(dd1.min()):.2f}% (Fons A) vs {abs(dd2.min()):.2f}% (Fons B)",
+            f"Tracking Error elevat: {tracking_error:.2f}%"
+        ]
+    elif cagr1 > cagr2 + 0.8:
+        v_type = "true_active"
+        v_badge = "💎 Gestió Activa de Convicció"
+        v_title = f"{m1['name']} genera valor afegit i Alpha positiu respecte a {m2['name']}"
+        v_summary = (
+            f"El fons actiu aconsegueix superar al vehicle comparat (+{cagr1 - cagr2:.2f}% CAGR), generant un "
+            f"Alpha anualitzat del +{alpha1:.2f}%. En aquest horitzó, la convicció de l'equip gestor ha compensat la comissió."
+        )
+        v_recommendation = f"Mantenir Fons A si es desitja exposició a la gestió activa d'aquesta firma."
+        v_bullets = [
+            f"Alpha anualitzat generat: +{alpha1:.2f}%",
+            f"Information Ratio: {information_ratio:.2f}",
+            f"Ràtio Sortino: {sortino1:.2f} (Fons A) vs {sortino2:.2f} (Fons B)"
+        ]
+    else:
+        v_type = "balanced"
+        v_badge = "⚖️ Comportament Paritari"
+        v_title = "Rendiments i perfils de risc equilibrats entre ambdós fons"
+        v_summary = (
+            f"Ambdós vehicles presenten una trajectòria similar en l'horitzó analitzat. La diferència de CAGR "
+            f"és de només {abs(cagr1 - cagr2):.2f}% anualitzat."
+        )
+        v_recommendation = f"Comparar comissions (TER {ter1:.2f}% vs {ter2:.2f}%) i ràtio de Sharpe com a factors decisius."
+        v_bullets = [
+            f"Diferencial de CAGR: {abs(cagr1 - cagr2):.2f}% anual",
+            f"Sharpe: {sharpe1:.2f} vs {sharpe2:.2f}",
+            f"Comissió TER: {ter1:.2f}% vs {ter2:.2f}%"
+        ]
+
+    verdict_data = {
+        "type": v_type,
+        "badge": v_badge,
+        "title": v_title,
+        "summary": v_summary,
+        "recommendation": v_recommendation,
+        "bullets": v_bullets,
+        "is_closet": is_closet
+    }
 
     # Downsampling
     step = max(1, len(sub_pivot) // 350)
@@ -668,6 +786,7 @@ def compare_funds_pairwise_history(
             "end": sub_pivot.index[-1].strftime("%Y-%m-%d"),
             "total_days": len(sub_pivot)
         },
+        "verdict": verdict_data,
         "fund1": {
             "isin": id1,
             "name": m1["name"],
@@ -678,6 +797,8 @@ def compare_funds_pairwise_history(
                 "cagr_pct": round(cagr1, 2),
                 "volatility_pct": round(vol1, 2),
                 "sharpe_ratio": round(sharpe1, 2),
+                "sortino_ratio": round(sortino1, 2),
+                "calmar_ratio": round(calmar1, 2),
                 "max_drawdown_pct": round(float(dd1.min()), 2),
                 "max_drawdown_date": str(dd1.idxmin().strftime("%Y-%m-%d"))
             }
@@ -692,19 +813,25 @@ def compare_funds_pairwise_history(
                 "cagr_pct": round(cagr2, 2),
                 "volatility_pct": round(vol2, 2),
                 "sharpe_ratio": round(sharpe2, 2),
+                "sortino_ratio": round(sortino2, 2),
+                "calmar_ratio": round(calmar2, 2),
                 "max_drawdown_pct": round(float(dd2.min()), 2),
                 "max_drawdown_date": str(dd2.idxmin().strftime("%Y-%m-%d"))
             }
         },
         "comparison": {
             "correlation": round(corr, 3),
+            "beta": round(beta1, 2),
+            "alpha_annual_pct": round(alpha1, 2),
+            "tracking_error_pct": round(tracking_error, 2),
+            "information_ratio": round(information_ratio, 2),
             "spread_total_return_pct": round(ret2 - ret1, 2),
             "spread_cagr_pct": round(cagr2 - cagr1, 2),
             "capital_10k_fund1": cap1_10k,
             "capital_10k_fund2": cap2_10k,
             "difference_10k_euros": diff_10k,
             "ter_differential_annual_10k": ter_diff_annual,
-            "is_closet_clone": bool(corr >= 0.90 and abs(ter1 - ter2) >= 0.8)
+            "is_closet_clone": is_closet
         },
         "timeline": timeline_str,
         "fund1_base100": s_b1,

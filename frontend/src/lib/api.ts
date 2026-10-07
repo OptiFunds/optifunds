@@ -85,6 +85,16 @@ export interface SharedHoldingPairwise {
   overlap_weight: number;
 }
 
+export interface ExecutiveVerdict {
+  type: "closet_indexing" | "fee_inefficiency" | "true_active" | "diversification" | "balanced";
+  badge: string;
+  title: string;
+  summary: string;
+  recommendation: string;
+  bullets: string[];
+  is_closet: boolean;
+}
+
 export interface HistoricalComparisonData {
   period: string;
   date_range: {
@@ -92,6 +102,7 @@ export interface HistoricalComparisonData {
     end: string;
     total_days: number;
   };
+  verdict?: ExecutiveVerdict;
   fund1: {
     isin: string;
     name: string;
@@ -102,6 +113,8 @@ export interface HistoricalComparisonData {
       cagr_pct: number;
       volatility_pct: number;
       sharpe_ratio: number;
+      sortino_ratio?: number;
+      calmar_ratio?: number;
       max_drawdown_pct: number;
       max_drawdown_date: string;
     };
@@ -116,12 +129,18 @@ export interface HistoricalComparisonData {
       cagr_pct: number;
       volatility_pct: number;
       sharpe_ratio: number;
+      sortino_ratio?: number;
+      calmar_ratio?: number;
       max_drawdown_pct: number;
       max_drawdown_date: string;
     };
   };
   comparison: {
     correlation: number;
+    beta?: number;
+    alpha_annual_pct?: number;
+    tracking_error_pct?: number;
+    information_ratio?: number;
     spread_total_return_pct: number;
     spread_cagr_pct: number;
     capital_10k_fund1: number;

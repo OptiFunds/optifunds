@@ -18,7 +18,12 @@ import {
   Sparkles,
   ArrowLeftRight,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle2,
+  Activity,
+  Award,
+  Scale
 } from "lucide-react";
 
 const POPULAR_COMPARISON_PRESETS = [
@@ -579,6 +584,92 @@ function CompareContent() {
           </div>
         </div>
 
+        {/* VERDICTE EXECUTIU FIDUCIARI & DIAGNÒSTIC INTEL·LIGENT */}
+        {data.historical_comparison?.verdict && (
+          <div className={`rounded-2xl border-2 p-6 sm:p-7 shadow-xs space-y-5 transition-all ${
+            data.historical_comparison.verdict.is_closet
+              ? "bg-gradient-to-br from-amber-50/60 via-white to-rose-50/40 border-amber-300/90"
+              : data.historical_comparison.verdict.type === "fee_inefficiency"
+              ? "bg-gradient-to-br from-amber-50/50 via-white to-orange-50/30 border-amber-300/80"
+              : data.historical_comparison.verdict.type === "true_active"
+              ? "bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/30 border-blue-200"
+              : "bg-gradient-to-br from-emerald-50/50 via-white to-slate-50 border-emerald-200"
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-100 pb-5">
+              <div className="space-y-1.5 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-slate-900 text-white">
+                    Auditoria Fiduciària 1:1
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-500">
+                    DIAGNÒSTIC AUTOMATITZAT INDEPENDENT
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight flex items-center gap-2.5">
+                  {data.historical_comparison.verdict.is_closet ? (
+                    <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0" />
+                  ) : data.historical_comparison.verdict.type === "true_active" ? (
+                    <Award className="w-6 h-6 text-blue-600 shrink-0" />
+                  ) : (
+                    <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0" />
+                  )}
+                  <span>{data.historical_comparison.verdict.title}</span>
+                </h2>
+              </div>
+              <div className="shrink-0">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border uppercase tracking-wider ${
+                  data.historical_comparison.verdict.is_closet
+                    ? "bg-rose-100 text-rose-800 border-rose-300"
+                    : data.historical_comparison.verdict.type === "fee_inefficiency"
+                    ? "bg-amber-100 text-amber-800 border-amber-300"
+                    : data.historical_comparison.verdict.type === "true_active"
+                    ? "bg-blue-100 text-blue-800 border-blue-300"
+                    : "bg-emerald-100 text-emerald-800 border-emerald-300"
+                }`}>
+                  {data.historical_comparison.verdict.badge}
+                </span>
+              </div>
+            </div>
+
+            {/* Resum Executiu */}
+            <p className="text-sm text-slate-700 leading-relaxed">
+              {data.historical_comparison.verdict.summary}
+            </p>
+
+            {/* Tres Pilars Analítics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+              {data.historical_comparison.verdict.bullets.map((bullet, idx) => (
+                <div key={idx} className="p-4 rounded-xl bg-white/95 border border-slate-200 shadow-2xs space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                    <CheckCircle2 className="w-4 h-4 text-[#00B050] shrink-0" />
+                    <span>Pilar Analític #{idx + 1}</span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed pl-6">{bullet}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Dictamen i Recomanació Fiduciària */}
+            <div className="p-4 sm:p-5 rounded-xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+              <div className="space-y-1 flex-1">
+                <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider block">
+                  Recomanació Estratègica per a l'Inversor
+                </span>
+                <p className="text-xs sm:text-sm text-slate-200 font-medium leading-relaxed">
+                  {data.historical_comparison.verdict.recommendation}
+                </p>
+              </div>
+              <Link
+                href={`/optimize?fund=${encodeURIComponent(fund1.isin)}`}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#00B050] hover:bg-[#009040] text-white text-xs font-bold transition shrink-0 whitespace-nowrap shadow-xs"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Optimitzar amb Smart Switch</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
       {/* Targeta de Similitud i Solapament */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -830,6 +921,290 @@ function CompareContent() {
                 {data.historical_comparison.comparison.ter_differential_annual_10k.toLocaleString()} €
               </span>
               <span className="text-[10px] text-emerald-700 mt-0.5 block">cada any per cada 10k €</span>
+            </div>
+          </div>
+        )}
+
+        {/* MATRIU AVANÇADA DE RISC I EFICIÈNCIA (ALPHA, BETA, SORTINO, CALMAR) */}
+        {data.historical_comparison && (
+          <div className="pt-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-[#00B050]" />
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    Matriu Avançada de Risc i Eficiència Institucional
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    Mètriques economètriques d'auditoria (CAPM Alpha, Beta, Tracking Error, Sortino & Calmar)
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] text-slate-400 font-mono">
+                Sèrie Oficial CNMV ({data.historical_comparison.period.toUpperCase()})
+              </span>
+            </div>
+
+            <div className="overflow-x-auto mt-3">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase text-slate-500">
+                    <th className="py-2.5 px-4 font-semibold">Mètrica Institucional</th>
+                    <th className="py-2.5 px-4 text-right text-blue-700 font-semibold">Fons A ({fund1.fund_name.slice(0, 16)}...)</th>
+                    <th className="py-2.5 px-4 text-right text-emerald-700 font-semibold">Fons B ({fund2.fund_name.slice(0, 16)}...)</th>
+                    <th className="py-2.5 px-4 text-right font-semibold">Diferencial / Ràtio</th>
+                    <th className="py-2.5 px-4 font-semibold">Diagnòstic i Interpretació Fiduciària</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {/* BETA */}
+                  <tr className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-bold text-slate-900">
+                      Beta (&beta;) vs Fons B
+                      <span className="block text-[10px] font-normal text-slate-400 font-sans">Sensibilitat sistemàtica de mercat</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-800">
+                      {data.historical_comparison.comparison.beta != null ? fmtNum(data.historical_comparison.comparison.beta) : "N/D"}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-500">
+                      1.00 <span className="text-[10px] font-normal text-slate-400">(Ref)</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-700">
+                      {data.historical_comparison.comparison.beta != null ? `${fmtNum(data.historical_comparison.comparison.beta)}x` : "N/D"}
+                    </td>
+                    <td className="py-3 px-4 font-sans text-slate-600 text-[11px] leading-relaxed">
+                      {data.historical_comparison.comparison.beta != null ? (
+                        data.historical_comparison.comparison.beta >= 0.85 && data.historical_comparison.comparison.beta <= 1.15 ? (
+                          <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded font-medium border border-amber-200">
+                            &beta; &approx; 1.0: Exposició al risc sistemàtic idèntica al benchmark (clon de mercat).
+                          </span>
+                        ) : data.historical_comparison.comparison.beta < 0.85 ? (
+                          <span className="text-blue-800 bg-blue-50 px-2 py-0.5 rounded font-medium border border-blue-200">
+                            &beta; defensiva: Menor sensibilitat a les oscil·lacions del mercat.
+                          </span>
+                        ) : (
+                          <span className="text-purple-800 bg-purple-50 px-2 py-0.5 rounded font-medium border border-purple-200">
+                            &beta; amplificada: Major risc i volatilitat que el benchmark de referència.
+                          </span>
+                        )
+                      ) : "N/D"}
+                    </td>
+                  </tr>
+
+                  {/* ALPHA */}
+                  <tr className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-bold text-slate-900">
+                      Alfa Anualitzada (&alpha; Jensen)
+                      <span className="block text-[10px] font-normal text-slate-400 font-sans">Retorn excedent ajustat per risc</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-800">
+                      {data.historical_comparison.comparison.alpha_annual_pct != null ? fmtPct(data.historical_comparison.comparison.alpha_annual_pct, true) : "N/D"}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-500">
+                      0.00% <span className="text-[10px] font-normal text-slate-400">(Base)</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold">
+                      <span className={
+                        (data.historical_comparison.comparison.alpha_annual_pct ?? 0) >= 0 ? "text-[#00B050]" : "text-rose-600"
+                      }>
+                        {data.historical_comparison.comparison.alpha_annual_pct != null ? fmtPct(data.historical_comparison.comparison.alpha_annual_pct, true) : "N/D"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-sans text-slate-600 text-[11px] leading-relaxed">
+                      {data.historical_comparison.comparison.alpha_annual_pct != null ? (
+                        data.historical_comparison.comparison.alpha_annual_pct > 0.5 ? (
+                          <span className="text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded font-medium border border-emerald-200">
+                            &alpha; Positiu: El gestor aporta valor afegit net superior al risc assumit.
+                          </span>
+                        ) : data.historical_comparison.comparison.alpha_annual_pct >= -0.5 ? (
+                          <span className="text-slate-700 bg-slate-100 px-2 py-0.5 rounded font-medium">
+                            &alpha; Neutre: El retorn s'explica pel mercat; no hi ha creació de valor diferencial.
+                          </span>
+                        ) : (
+                          <span className="text-rose-800 bg-rose-50 px-2 py-0.5 rounded font-medium border border-rose-200">
+                            &alpha; Negatiu: Destrucció neta de valor després de deduir comissions de gestió.
+                          </span>
+                        )
+                      ) : "N/D"}
+                    </td>
+                  </tr>
+
+                  {/* TRACKING ERROR */}
+                  <tr className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-bold text-slate-900">
+                      Tracking Error (TE)
+                      <span className="block text-[10px] font-normal text-slate-400 font-sans">Volatilitat del diferencial de retorns</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-800">
+                      {data.historical_comparison.comparison.tracking_error_pct != null ? `${fmtNum(data.historical_comparison.comparison.tracking_error_pct)}%` : "N/D"}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-500">
+                      0.00% <span className="text-[10px] font-normal text-slate-400">(Base)</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-700">
+                      {data.historical_comparison.comparison.tracking_error_pct != null ? `${fmtNum(data.historical_comparison.comparison.tracking_error_pct)}%` : "N/D"}
+                    </td>
+                    <td className="py-3 px-4 font-sans text-slate-600 text-[11px] leading-relaxed">
+                      {data.historical_comparison.comparison.tracking_error_pct != null ? (
+                        data.historical_comparison.comparison.tracking_error_pct < 3.0 ? (
+                          <span className="text-rose-800 bg-rose-50 px-2 py-0.5 rounded font-medium border border-rose-200">
+                            TE &lt; 3.0%: Rèplica quasi idèntica. Fort indici de Closet Indexing si cobra TER actiu.
+                          </span>
+                        ) : data.historical_comparison.comparison.tracking_error_pct <= 6.0 ? (
+                          <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded font-medium border border-amber-200">
+                            TE 3-6%: Gestió semicoactiva amb desviacions moderades respecte a l'índex.
+                          </span>
+                        ) : (
+                          <span className="text-blue-800 bg-blue-50 px-2 py-0.5 rounded font-medium border border-blue-200">
+                            TE &gt; 6%: Gestió activa autèntica d'alta convicció amb posicions diferenciades.
+                          </span>
+                        )
+                      ) : "N/D"}
+                    </td>
+                  </tr>
+
+                  {/* INFORMATION RATIO */}
+                  <tr className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-bold text-slate-900">
+                      Information Ratio (IR)
+                      <span className="block text-[10px] font-normal text-slate-400 font-sans">Retorn actiu / Tracking Error</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-800">
+                      {data.historical_comparison.comparison.information_ratio != null ? fmtNum(data.historical_comparison.comparison.information_ratio) : "N/D"}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-400">-</td>
+                    <td className="py-3 px-4 text-right font-bold">
+                      <span className={
+                        (data.historical_comparison.comparison.information_ratio ?? 0) >= 0 ? "text-[#00B050]" : "text-rose-600"
+                      }>
+                        {data.historical_comparison.comparison.information_ratio != null ? fmtNum(data.historical_comparison.comparison.information_ratio) : "N/D"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-sans text-slate-600 text-[11px] leading-relaxed">
+                      {data.historical_comparison.comparison.information_ratio != null ? (
+                        data.historical_comparison.comparison.information_ratio > 0.5 ? (
+                          <span className="text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded font-medium border border-emerald-200">
+                            IR &gt; 0.5: Excel·lent consistència del gestor en generar retorn per unitat de risc actiu.
+                          </span>
+                        ) : data.historical_comparison.comparison.information_ratio >= 0 ? (
+                          <span className="text-slate-700 bg-slate-100 px-2 py-0.5 rounded font-medium">
+                            IR 0-0.5: Eficiència moderada o marginal del risc diferencial assumit.
+                          </span>
+                        ) : (
+                          <span className="text-rose-800 bg-rose-50 px-2 py-0.5 rounded font-medium border border-rose-200">
+                            IR &lt; 0: Risc actiu destructor. Desviar-se de l'índex ha perjudicat l'inversor.
+                          </span>
+                        )
+                      ) : "N/D"}
+                    </td>
+                  </tr>
+
+                  {/* SORTINO RATIO */}
+                  <tr className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-bold text-slate-900">
+                      Ràtio de Sortino
+                      <span className="block text-[10px] font-normal text-slate-400 font-sans">Eficiència penalitzant només pèrdues (downside risk)</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-blue-700">
+                      {fmtNum(data.historical_comparison.fund1.metrics.sortino_ratio)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-emerald-700">
+                      {fmtNum(data.historical_comparison.fund2.metrics.sortino_ratio)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold">
+                      {data.historical_comparison.fund1.metrics.sortino_ratio != null && data.historical_comparison.fund2.metrics.sortino_ratio != null ? (
+                        <span className={
+                          (data.historical_comparison.fund2.metrics.sortino_ratio - data.historical_comparison.fund1.metrics.sortino_ratio) >= 0
+                            ? "text-[#00B050]"
+                            : "text-blue-700"
+                        }>
+                          {(data.historical_comparison.fund2.metrics.sortino_ratio - data.historical_comparison.fund1.metrics.sortino_ratio) >= 0 ? "+" : ""}
+                          {fmtNum(data.historical_comparison.fund2.metrics.sortino_ratio - data.historical_comparison.fund1.metrics.sortino_ratio)} (B vs A)
+                        </span>
+                      ) : "N/D"}
+                    </td>
+                    <td className="py-3 px-4 font-sans text-slate-600 text-[11px] leading-relaxed">
+                      Mesura el retorn net penalitzant exclusivament la volatilitat negativa. Ignora la pujada benigna del mercat.
+                    </td>
+                  </tr>
+
+                  {/* CALMAR RATIO */}
+                  <tr className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-bold text-slate-900">
+                      Ràtio de Calmar (CAGR / |MaxDD|)
+                      <span className="block text-[10px] font-normal text-slate-400 font-sans">Capacitat de recuperació davant caigudes màximes</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-blue-700">
+                      {fmtNum(data.historical_comparison.fund1.metrics.calmar_ratio)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-emerald-700">
+                      {fmtNum(data.historical_comparison.fund2.metrics.calmar_ratio)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold">
+                      {data.historical_comparison.fund1.metrics.calmar_ratio != null && data.historical_comparison.fund2.metrics.calmar_ratio != null ? (
+                        <span className={
+                          (data.historical_comparison.fund2.metrics.calmar_ratio - data.historical_comparison.fund1.metrics.calmar_ratio) >= 0
+                            ? "text-[#00B050]"
+                            : "text-blue-700"
+                        }>
+                          {(data.historical_comparison.fund2.metrics.calmar_ratio - data.historical_comparison.fund1.metrics.calmar_ratio) >= 0 ? "+" : ""}
+                          {fmtNum(data.historical_comparison.fund2.metrics.calmar_ratio - data.historical_comparison.fund1.metrics.calmar_ratio)} (B vs A)
+                        </span>
+                      ) : "N/D"}
+                    </td>
+                    <td className="py-3 px-4 font-sans text-slate-600 text-[11px] leading-relaxed">
+                      Indica quants punts de retorn anual genera el vehicle per cada punt de caiguda màxima històrica patida.
+                    </td>
+                  </tr>
+
+                  {/* SHARPE RATIO */}
+                  <tr className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-bold text-slate-900">
+                      Ràtio de Sharpe
+                      <span className="block text-[10px] font-normal text-slate-400 font-sans">Retorn ajustat per volatilitat total anualitzada</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-blue-700">
+                      {fmtNum(data.historical_comparison.fund1.metrics.sharpe_ratio)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-emerald-700">
+                      {fmtNum(data.historical_comparison.fund2.metrics.sharpe_ratio)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold">
+                      <span className={
+                        (data.historical_comparison.fund2.metrics.sharpe_ratio - data.historical_comparison.fund1.metrics.sharpe_ratio) >= 0
+                          ? "text-[#00B050]"
+                          : "text-blue-700"
+                      }>
+                        {(data.historical_comparison.fund2.metrics.sharpe_ratio - data.historical_comparison.fund1.metrics.sharpe_ratio) >= 0 ? "+" : ""}
+                        {fmtNum(data.historical_comparison.fund2.metrics.sharpe_ratio - data.historical_comparison.fund1.metrics.sharpe_ratio)} (B vs A)
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-sans text-slate-600 text-[11px] leading-relaxed">
+                      Retorn excedent anualitzat per unitat de desviació estàndard total (taxa lliure de risc = 2.5%).
+                    </td>
+                  </tr>
+
+                  {/* VOLATILITAT */}
+                  <tr className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-bold text-slate-900">
+                      Volatilitat Anualitzada (&sigma;)
+                      <span className="block text-[10px] font-normal text-slate-400 font-sans">Desviació estàndard anualitzada dels retorns</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-blue-700">
+                      {fmtPct(data.historical_comparison.fund1.metrics.volatility_pct)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-emerald-700">
+                      {fmtPct(data.historical_comparison.fund2.metrics.volatility_pct)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-700">
+                      {fmtPct((data.historical_comparison.fund2.metrics.volatility_pct ?? 0) - (data.historical_comparison.fund1.metrics.volatility_pct ?? 0), true)}
+                    </td>
+                    <td className="py-3 px-4 font-sans text-slate-600 text-[11px] leading-relaxed">
+                      Nivell de variabilitat i sacsejada de la cartera. Menor volatilitat ofereix un trajecte més còmode per a l'inversor.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         )}
