@@ -13,6 +13,7 @@ import math
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import duckdb
+import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
@@ -34,11 +35,28 @@ def build_screener_master(force: bool = False) -> Path:
 
     con = duckdb.connect()
 
+    intl_records = []
+    try:
+        from modules.international_nav_engine import KNOWN_INTERNATIONAL_METADATA
+        intl_records = [
+            {
+                "isin": k,
+                "name": v["name"],
+                "category": v.get("category", "Renda Variable"),
+                "ter": v.get("ter", 0.20),
+                "manager": v.get("manager", "Internacional")
+            }
+            for k, v in KNOWN_INTERNATIONAL_METADATA.items()
+        ]
+    except Exception:
+        pass
+    con.register("intl_meta_df", pd.DataFrame(intl_records) if intl_records else pd.DataFrame(columns=["isin", "name", "category", "ter", "manager"]))
+
     has_nav = NAV_PARQUET.exists()
 
     if has_nav:
         sql = f"""
-        -- 1. Dates i punts per instrument a CNMV
+        -- 1. Dates i punts per instrument a la base de dades
         CREATE TEMP TABLE inst_dates AS
         SELECT 
             instrument,
@@ -46,7 +64,7 @@ def build_screener_master(force: bool = False) -> Path:
             max(date) as max_date,
             count(*) as n_days
         FROM read_parquet('{NAV_PARQUET}')
-        WHERE nav > 0 AND date <= '2024-12-31'
+        WHERE nav > 0
         GROUP BY instrument;
 
         -- 2. NAVs històrics claus (actual, 1A, 3A, 5A, 10A)
@@ -63,11 +81,11 @@ def build_screener_master(force: bool = False) -> Path:
                     CASE WHEN h.date <= d.max_date - INTERVAL 1095 DAY THEN h.date ELSE NULL END) as nav_3y,
             arg_max(CASE WHEN h.date <= d.max_date - INTERVAL 1825 DAY THEN h.nav ELSE NULL END, 
                     CASE WHEN h.date <= d.max_date - INTERVAL 1825 DAY THEN h.date ELSE NULL END) as nav_5y,
-            arg_max(CASE WHEN h.date <= '2015-01-15' THEN h.nav ELSE NULL END, 
-                    CASE WHEN h.date <= '2015-01-15' THEN h.date ELSE NULL END) as nav_10y
+            arg_max(CASE WHEN h.date <= d.max_date - INTERVAL 3650 DAY THEN h.nav ELSE NULL END, 
+                    CASE WHEN h.date <= d.max_date - INTERVAL 3650 DAY THEN h.date ELSE NULL END) as nav_10y
         FROM read_parquet('{NAV_PARQUET}') h
         JOIN inst_dates d ON h.instrument = d.instrument
-        WHERE h.nav > 0 AND h.date <= '2024-12-31'
+        WHERE h.nav > 0
         GROUP BY h.instrument, d.min_date, d.max_date, d.n_days;
 
         -- 3. Volatilitat i Max Drawdown diari
@@ -80,7 +98,7 @@ def build_screener_master(force: bool = False) -> Path:
                 lag(nav) OVER (PARTITION BY instrument ORDER BY date) as prev_nav,
                 max(nav) OVER (PARTITION BY instrument ORDER BY date) as peak_nav
             FROM read_parquet('{NAV_PARQUET}')
-            WHERE nav > 0 AND date <= '2024-12-31'
+            WHERE nav > 0
         ),
         daily_stats AS (
             SELECT 
@@ -119,19 +137,22 @@ def build_screener_master(force: bool = False) -> Path:
         CREATE TABLE screener_master AS
         SELECT 
             COALESCE(m.ISIN, m.Instrument, c.isin) as isin,
-            COALESCE(m."Fund Name", m.Fund_Name_Full, 'Fons ' || c.isin) as fund_name,
-            COALESCE(m.Management_Company, 'Desconeguda') as management_company,
-            COALESCE(m.Asset_Class, 'Renda Variable / General') as asset_class,
-            CASE 
-                WHEN m.Asset_Class ILIKE '%Equity%' THEN 'Renda Variable'
-                WHEN m.Asset_Class ILIKE '%Bond%' THEN 'Renda Fixa'
-                WHEN m.Asset_Class ILIKE '%Mixed%' THEN 'Mixts'
-                WHEN m.Asset_Class ILIKE '%Money%' THEN 'Monetaris'
-                WHEN m.Asset_Class ILIKE '%Alternative%' OR m.Asset_Class ILIKE '%Hedge%' THEN 'Alternatius'
-                WHEN m.Asset_Class ILIKE '%Commodity%' THEN 'Matèries Primeres'
-                ELSE 'Altres / Global'
-            END as asset_class_group,
-            ROUND(COALESCE(TRY_CAST(REPLACE(REPLACE(CAST(m.TER_Estimat AS VARCHAR), '%', ''), ',', '.') AS DOUBLE), 1.25), 2) as ter,
+            COALESCE(m."Fund Name", m.Fund_Name_Full, im.name, 'Fons ' || c.isin) as fund_name,
+            COALESCE(m.Management_Company, im.manager, 'Desconeguda') as management_company,
+            COALESCE(m.Asset_Class, im.category, 'Renda Variable / General') as asset_class,
+            COALESCE(
+                im.category,
+                CASE 
+                    WHEN m.Asset_Class ILIKE '%Equity%' THEN 'Renda Variable'
+                    WHEN m.Asset_Class ILIKE '%Bond%' THEN 'Renda Fixa'
+                    WHEN m.Asset_Class ILIKE '%Mixed%' THEN 'Mixts'
+                    WHEN m.Asset_Class ILIKE '%Money%' THEN 'Monetaris'
+                    WHEN m.Asset_Class ILIKE '%Alternative%' OR m.Asset_Class ILIKE '%Hedge%' THEN 'Alternatius'
+                    WHEN m.Asset_Class ILIKE '%Commodity%' THEN 'Matèries Primeres'
+                    ELSE 'Altres / Global'
+                END
+            ) as asset_class_group,
+            ROUND(COALESCE(TRY_CAST(REPLACE(REPLACE(CAST(m.TER_Estimat AS VARCHAR), '%', ''), ',', '.') AS DOUBLE), im.ter, 1.25), 2) as ter,
             ROUND(COALESCE(TRY_CAST(REPLACE(REPLACE(CAST(m.Management_Fee AS VARCHAR), '%', ''), ',', '.') AS DOUBLE), 0.90), 2) as management_fee,
             COALESCE(c.hist_ret_1y, TRY_CAST(REPLACE(REPLACE(CAST(m.Return_1Y AS VARCHAR), '%', ''), ',', '.') AS DOUBLE)) as ret_1y,
             c.hist_cagr_3y as cagr_3y,
@@ -146,7 +167,8 @@ def build_screener_master(force: bool = False) -> Path:
             c.max_date as history_end_date,
             COALESCE(c.n_days, 0) as history_data_points
         FROM read_parquet('{MASTER_PARQUET}') m
-        LEFT JOIN cnmv_metrics c ON m.ISIN = c.isin;
+        FULL OUTER JOIN cnmv_metrics c ON m.ISIN = c.isin
+        LEFT JOIN intl_meta_df im ON COALESCE(m.ISIN, c.isin) = im.isin;
 
         COPY screener_master TO '{SCREENER_MASTER_PARQUET}' (FORMAT PARQUET);
         """

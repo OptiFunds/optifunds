@@ -165,34 +165,52 @@ def get_sync_status():
 
 @app.get("/api/v1/funds/search")
 def search_funds(q: str = ""):
+    s_path = DATA_DIR / "optifunds_screener_master.parquet"
     m_path = DATA_DIR / "optifunds_master_spain.parquet"
-    if not m_path.exists():
+    target_path = s_path if s_path.exists() else m_path
+    if not target_path.exists():
         return []
     con = duckdb.connect()
-
-    c_ter  = get_existing_col(con, m_path, ["TER_Estimat", "Total Expense Ratio"], "1.25")
-    c_name = get_existing_col(con, m_path, ["Fund Name", "Fund_Name_Full"], "'Sense Nom'")
-    c_isin = get_existing_col(con, m_path, ["ISIN", "Instrument"], "''")
-    clean_ter = _clean_num(c_ter)
 
     q_safe = q.replace("'", "''").strip()
     where_clause = ""
     if q_safe:
         where_clause = (
-            f"WHERE {c_name} ILIKE '%{q_safe}%' "
-            f"OR {c_isin} ILIKE '%{q_safe}%' "
-            f"OR Instrument ILIKE '%{q_safe}%'"
+            f"WHERE fund_name ILIKE '%{q_safe}%' "
+            f"OR isin ILIKE '%{q_safe}%'"
         )
 
-    query = f"""
-        SELECT 
-            COALESCE({c_isin}, Instrument, '') AS isin,
-            COALESCE({c_name}, 'Sense Nom') AS fund_name,
-            ROUND(COALESCE({clean_ter}, 1.25), 2) AS ter
-        FROM read_parquet('{m_path}')
-        {where_clause}
-        LIMIT 40
-    """
+    if target_path == s_path:
+        query = f"""
+            SELECT 
+                isin,
+                fund_name,
+                ROUND(COALESCE(ter, 1.25), 2) AS ter
+            FROM read_parquet('{s_path}')
+            {where_clause}
+            ORDER BY 
+                CASE 
+                    WHEN isin ILIKE '{q_safe}%' THEN 1
+                    WHEN fund_name ILIKE '{q_safe}%' THEN 2
+                    ELSE 3
+                END,
+                fund_name ASC
+            LIMIT 40
+        """
+    else:
+        c_ter  = get_existing_col(con, m_path, ["TER_Estimat", "Total Expense Ratio"], "1.25")
+        c_name = get_existing_col(con, m_path, ["Fund Name", "Fund_Name_Full"], "'Sense Nom'")
+        c_isin = get_existing_col(con, m_path, ["ISIN", "Instrument"], "''")
+        clean_ter = _clean_num(c_ter)
+        query = f"""
+            SELECT 
+                COALESCE({c_isin}, Instrument, '') AS isin,
+                COALESCE({c_name}, 'Sense Nom') AS fund_name,
+                ROUND(COALESCE({clean_ter}, 1.25), 2) AS ter
+            FROM read_parquet('{m_path}')
+            {where_clause}
+            LIMIT 40
+        """
     df = con.execute(query).df()
     return df.to_dict(orient="records")
 
@@ -338,6 +356,32 @@ def get_fund_deep_dive(isin: str, min_overlap: float = 0.0):
         LIMIT 1
     """
     fund_df = con.execute(q_fund).df()
+    if fund_df.empty:
+        s_path = DATA_DIR / "optifunds_screener_master.parquet"
+        if s_path.exists():
+            try:
+                q_s = f"""
+                    SELECT 
+                        isin,
+                        isin AS ric,
+                        fund_name AS name,
+                        COALESCE(asset_class, 'Fons Internacional') AS category,
+                        'EUR' AS currency,
+                        ROUND(COALESCE(ter, 0.20), 2) AS ter,
+                        ROUND(COALESCE(management_fee, 0.15), 2) AS mgmt_fee,
+                        ROUND(ret_1y, 2) AS ret_1y,
+                        ROUND(cagr_3y, 2) AS ret_3y,
+                        ROUND(cagr_5y, 2) AS ret_5y,
+                        ROUND(volatility, 2) AS volatility,
+                        ROUND(sharpe_ratio, 2) AS sharpe
+                    FROM read_parquet('{s_path}')
+                    WHERE isin = '{isin_safe}' OR fund_name ILIKE '%{isin_safe}%'
+                    LIMIT 1
+                """
+                fund_df = con.execute(q_s).df()
+            except Exception:
+                pass
+
     if fund_df.empty:
         raise HTTPException(status_code=404, detail=f"No s'ha trobat cap vehicle per a: {isin}")
 
@@ -583,6 +627,24 @@ def get_performance_comparison_1y(isin: str):
         LIMIT 1
     """
     res = con.execute(q).df()
+    if res.empty:
+        s_path = DATA_DIR / "optifunds_screener_master.parquet"
+        if s_path.exists():
+            try:
+                q_s = f"""
+                    SELECT 
+                        fund_name AS name,
+                        COALESCE(asset_class, 'Fons Internacional') AS category,
+                        ROUND(ret_1y, 2) AS ret_1y,
+                        ROUND(volatility, 2) AS vol
+                    FROM read_parquet('{s_path}')
+                    WHERE isin = '{isin_safe}' OR fund_name ILIKE '%{isin_safe}%'
+                    LIMIT 1
+                """
+                res = con.execute(q_s).df()
+            except Exception:
+                pass
+
     if res.empty:
         raise HTTPException(status_code=404, detail="Fons no trobat")
 
@@ -1071,6 +1133,52 @@ def compare_funds_pairwise(f1: str, f2: str, period: str = "10y"):
                     row[k] = None
             return row
 
+        # Fallback a optifunds_screener_master.parquet
+        s_path = DATA_DIR / "optifunds_screener_master.parquet"
+        if s_path.exists():
+            try:
+                q_s = f"""
+                    SELECT 
+                        isin,
+                        fund_name,
+                        ROUND(TRY_CAST(ter AS DOUBLE), 2) AS ter,
+                        ROUND(TRY_CAST(volatility AS DOUBLE), 2) AS volatility,
+                        ROUND(TRY_CAST(ret_1y AS DOUBLE), 2) AS return_1y,
+                        ROUND(TRY_CAST(cagr_3y AS DOUBLE), 2) AS return_3y,
+                        ROUND(TRY_CAST(sharpe_ratio AS DOUBLE), 2) AS sharpe,
+                        isin AS ric
+                    FROM read_parquet('{s_path}')
+                    WHERE isin = '{identifier}'
+                    LIMIT 1
+                """
+                df_s = con.execute(q_s).df()
+                if len(df_s) > 0:
+                    row = df_s.to_dict(orient="records")[0]
+                    for k, v in row.items():
+                        if v != v:
+                            row[k] = None
+                    return row
+            except Exception:
+                pass
+
+        # Fallback a metadades internacionals conegudes
+        try:
+            from modules.international_nav_engine import KNOWN_INTERNATIONAL_METADATA
+            if identifier in KNOWN_INTERNATIONAL_METADATA:
+                meta = KNOWN_INTERNATIONAL_METADATA[identifier]
+                return {
+                    "isin": identifier,
+                    "fund_name": meta.get("name", f"Vehicle {identifier}"),
+                    "ter": meta.get("ter", 0.20),
+                    "volatility": None,
+                    "return_1y": None,
+                    "return_3y": None,
+                    "sharpe": None,
+                    "ric": identifier
+                }
+        except Exception:
+            pass
+
         if identifier in ['FR0010655746', 'ES0105336038']:
             return {
                 "isin": "FR0010655746",
@@ -1223,5 +1331,30 @@ def get_fund_history_series(isin: str, period: str = "max", benchmark: Optional[
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/funds/sync-international")
+def sync_international_funds_endpoint():
+    try:
+        from modules.international_nav_engine import sync_popular_myinvestor_funds
+        res = sync_popular_myinvestor_funds()
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/funds/{isin}/sync-nav")
+def sync_fund_nav_endpoint(isin: str):
+    try:
+        from modules.international_nav_engine import ingest_international_nav
+        success, count = ingest_international_nav(isin, force=True)
+        if not success:
+            raise HTTPException(status_code=400, detail=f"No s'ha pogut descarregar la sèrie per a {isin}")
+        return {"isin": isin, "success": success, "points_synced": count}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 

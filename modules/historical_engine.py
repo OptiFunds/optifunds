@@ -62,6 +62,20 @@ def resolve_fund_metadata(con: duckdb.DuckDBPyConnection, isin_or_ric: str) -> d
             }
     except Exception:
         pass
+
+    try:
+        from modules.international_nav_engine import KNOWN_INTERNATIONAL_METADATA
+        if clean_id in KNOWN_INTERNATIONAL_METADATA:
+            im = KNOWN_INTERNATIONAL_METADATA[clean_id]
+            return {
+                "isin": clean_id,
+                "name": im["name"],
+                "category": im.get("category", "Fons Internacional"),
+                "ter": float(im.get("ter", 0.20))
+            }
+    except Exception:
+        pass
+
     return default_meta
 
 
@@ -115,6 +129,16 @@ def get_fund_history(
     """
     df_raw = con.execute(q).df()
     con.close()
+
+    if df_raw.empty or target_isin not in df_raw["instrument"].values:
+        try:
+            from modules.international_nav_engine import ensure_fund_nav_available
+            if ensure_fund_nav_available(target_isin):
+                con = duckdb.connect()
+                df_raw = con.execute(q).df()
+                con.close()
+        except Exception as e:
+            print(f"Error intentant descàrrega sota demanda per a {target_isin}: {e}")
 
     if df_raw.empty or target_isin not in df_raw["instrument"].values:
         return {"error": f"No s'ha trobat cap sèrie històrica de NAV per al fons {isin}."}
@@ -562,6 +586,25 @@ def compare_funds_pairwise_history(
     # Comprovar presència de tots dos
     has_1 = id1 in pivot.columns and not pivot[id1].dropna().empty
     has_2 = id2 in pivot.columns and not pivot[id2].dropna().empty
+
+    if not has_1 or not has_2:
+        try:
+            from modules.international_nav_engine import ensure_fund_nav_available
+            reloaded = False
+            if not has_1 and ensure_fund_nav_available(id1):
+                reloaded = True
+            if not has_2 and ensure_fund_nav_available(id2):
+                reloaded = True
+            if reloaded:
+                con = duckdb.connect()
+                df_raw = con.execute(q).df()
+                con.close()
+                if not df_raw.empty:
+                    pivot = df_raw.pivot(index="date", columns="instrument", values="nav")
+                    has_1 = id1 in pivot.columns and not pivot[id1].dropna().empty
+                    has_2 = id2 in pivot.columns and not pivot[id2].dropna().empty
+        except Exception as e:
+            print(f"Error intentant ingesta sota demanda per a comparativa ({id1}, {id2}): {e}")
 
     if not has_1 and not has_2:
         return {"error": f"Cap dels dos fons ({isin1}, {isin2}) té sèrie històrica a la base de dades."}
