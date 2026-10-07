@@ -297,7 +297,7 @@ def get_fund_deep_dive(isin: str, min_overlap: float = 0.0):
     c_name = get_existing_col(con, m_path, ["Fund Name", "Fund_Name_Full"], "'Sense Nom'")
     c_isin = get_existing_col(con, m_path, ["ISIN", "Instrument"], "''")
     c_ric  = get_existing_col(con, m_path, ["RIC"], "''")
-    c_cat  = get_existing_col(con, m_path, ["Lipper Global Classification", "Category"], "'Renda Variable'")
+    c_cat  = get_existing_col(con, m_path, ["Asset_Class", "Lipper Global Classification", "Category"], "'Renda Variable'")
     c_curr = get_existing_col(con, m_path, ["Currency", "MiFID II Fund Currency"], "'EUR'")
     c_ter  = get_existing_col(con, m_path, ["TER_Estimat", "Total Expense Ratio"], "1.50")
     c_fee  = get_existing_col(con, m_path, ["Management_Fee", "Management Fee"], "1.25")
@@ -562,7 +562,7 @@ def get_performance_comparison_1y(isin: str):
     c_name = get_existing_col(con, m_path, ["Fund Name", "Fund_Name_Full"], "'Sense Nom'")
     c_isin = get_existing_col(con, m_path, ["ISIN", "Instrument"], "''")
     c_ric  = get_existing_col(con, m_path, ["RIC"], "''")
-    c_cat  = get_existing_col(con, m_path, ["Lipper Global Classification", "Category"], "'Renda Variable'")
+    c_cat  = get_existing_col(con, m_path, ["Asset_Class", "Lipper Global Classification", "Category"], "'Renda Variable'")
     c_r1y  = get_existing_col(con, m_path, ["Return_1Y", "Return 1Y"], "NULL")
     c_vol  = get_existing_col(con, m_path, ["Volatility_3Y", "Volatility 3Y"], "NULL")
 
