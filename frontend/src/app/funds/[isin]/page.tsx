@@ -553,12 +553,12 @@ export default function FundDetailPage() {
             )}
 
             <p className="text-xs text-slate-500 leading-relaxed bg-slate-50/80 p-4 rounded-xl border border-slate-100">
-              <span className="font-semibold text-slate-700">Règim de Traspàs Fiscal (Llei 35/2006):</span> El canvi cap a un fons indexat equivalent es pot realitzar mitjançant traspàs intern sense peatge fiscal ni tributació per guanys patrimonials a Espanya.
+              💡 <strong>Règim fiduciari a Espanya (Llei 35/2006):</strong> El canvi a un fons indexat equivalent es realitza mitjançant traspàs intern sense peatge fiscal ni tributació per guanys patrimonials.
             </p>
           </div>
 
           {/* SMART SWITCH */}
-          <div className="lg:col-span-5 bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-5">
+          <div className="lg:col-span-5 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-[#00B050] text-white flex items-center justify-center">

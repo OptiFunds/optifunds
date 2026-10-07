@@ -271,10 +271,13 @@ export function Navbar() {
             )}
           </div>
 
-          {/* INDICADOR DADES OFICIALS */}
-          <div className="hidden xl:flex items-center gap-2 pl-3 border-l border-slate-200 text-[11px] font-mono text-slate-500 shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-            <span>Dades Oficials CNMV</span>
+          {/* INDICADOR DUCKDB ENGINE */}
+          <div className="hidden xl:flex items-center gap-1.5 pl-1 text-[10px] font-mono text-slate-500 shrink-0 border-l border-slate-200 pl-3">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00B050]"></span>
+            </span>
+            <span className="font-medium text-slate-600">DuckDB</span>
           </div>
 
           {/* BOTÓ MENÚ MÒBIL */}

@@ -411,16 +411,16 @@ function CompareContent() {
 
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wider">
-                Anàlisi Comparativa 1:1
+              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-[#00B050] border border-emerald-100 uppercase tracking-wider">
+                Diagnòstic Comparatiu 1:1
               </span>
-              <span className="text-xs text-slate-400 font-mono">SOLAPAMENT DE CARTERES & SÈRIES NAV</span>
+              <span className="text-xs text-slate-400 font-mono">LOOK-THROUGH AUDIT</span>
             </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-950 tracking-tight leading-snug">
-              Comparador Cara a Cara de Fons
+              Cara a Cara: <span className="text-[#00B050]">Look-Through & Solapament</span>
             </h1>
             <p className="text-sm text-slate-600 max-w-2xl leading-relaxed">
-              Anàlisi comparativa d&apos;assignació d&apos;actius i rendiment històric entre dos fons d&apos;inversió. Avaluació de solapament de carteres d&apos;accions, correlació estadística i comissions.
+              Radiografia microscòpica comparada de dos vehicles d'inversió: avalua acció per acció si pagues gestió activa autèntica o una simple duplicitat de cartera.
             </p>
           </div>
         </div>
@@ -859,7 +859,7 @@ function CompareContent() {
               <span className={`text-[10px] font-semibold mt-0.5 block ${
                 data.historical_comparison.comparison.is_closet_clone ? "text-amber-700 font-bold" : "text-slate-500"
               }`}>
-                {data.historical_comparison.comparison.is_closet_clone ? "Alta correlació (Clon)" : "Comportament independent"}
+                {data.historical_comparison.comparison.is_closet_clone ? "⚠️ Clon car detectat" : "Comportament independent"}
               </span>
             </div>
 

@@ -120,16 +120,16 @@ function OptimizeContent() {
         {/* TITULAR EDITORIAL */}
         <div className="space-y-2 border-b border-slate-200/80 pb-6">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wider">
-              Eficiència de Costos MiFID II
+            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/70 uppercase tracking-wider">
+              Rèplica Passiva & Reducció de Comissions
             </span>
-            <span className="text-xs text-slate-400 font-mono">SOLAPAMENT & RÈPLICA PASSIVA</span>
+            <span className="text-xs text-slate-400 font-mono">UCITS / Lipper Database</span>
           </div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-950 tracking-tight leading-snug">
-            Optimitzador d&apos;Alternatives de Baix Cost (Smart Switch)
+            Smart Switch: <span className="text-[#00B050]">Substitució Indexada</span>
           </h1>
           <p className="text-sm text-slate-600 max-w-2xl leading-relaxed">
-            Identificació de vehicles indexats i d&apos;alta eficiència de costos amb màxim solapament de cartera (look-through) respecte al fons analitzat, per reduir despeses mantenint l&apos;exposició sectorial i d&apos;actius.
+            Troba rèpliques fidels de baix cost basades en el solapament real de valors en cartera (look-through), reduint costos de gestió sense alterar la teva estratègia d&apos;inversió.
           </p>
         </div>
 
