@@ -1,5 +1,18 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { 
+  ArrowRight, 
+  ArrowUpRight, 
+  ShieldAlert, 
+  Sparkles, 
+  Layers, 
+  Calculator, 
+  ArrowLeftRight,
+  BarChart3,
+  CheckCircle2,
+  TrendingUp,
+  Percent,
+  Database
+} from "lucide-react";
 import { FlowingWave } from "@/components/FlowingWave";
 
 interface TopSpanishFund {
@@ -54,287 +67,368 @@ const topSpanishFunds: TopSpanishFund[] = [
   },
 ];
 
-function getBadgeStyle(value: number) {
-  const minAlpha = 0.25;
-  const maxAlpha = 1.0;
-  const clamped = Math.max(8, Math.min(23, value));
-  const alpha = minAlpha + ((clamped - 8) / (23 - 8)) * (maxAlpha - minAlpha);
-
-  return {
-    backgroundColor: `rgba(0, 176, 80, ${alpha.toFixed(2)})`,
-    color: "#FFFFFF",
-  };
-}
-
 export default function HomePage() {
   return (
-    <div className="bg-white flex flex-col font-sans">
+    <div className="bg-[#F8FAFC] flex flex-col font-sans">
 
-      {/* 2. ZONA HERO PRINCIPAL */}
-      <main className="w-full max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-14 pt-6 lg:pt-8 pb-8 lg:pb-10 flex flex-col lg:flex-row justify-between items-center gap-8 lg:gap-14">
-        
-        {/* COLUMNA ESQUERRA */}
-        <div className="w-full lg:max-w-xl xl:max-w-2xl space-y-2.5">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.08]">
-            Eines per a <br />
-            <span className="text-[#00B050]">Inversors Intel·ligents</span>
-          </h1>
-          <p className="text-lg sm:text-xl text-slate-600 font-normal leading-relaxed max-w-lg pt-0.5">
-            Les teves <strong className="font-semibold text-slate-900">inversions</strong>, explicades amb <strong className="font-semibold text-slate-900">total transparència</strong>.
-          </p>
-        </div>
+      {/* 1. HERO PRINCIPAL */}
+      <section className="w-full bg-white border-b border-slate-200/80 py-10 sm:py-14">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row justify-between items-center gap-10 lg:gap-14">
+          
+          {/* COLUMNA ESQUERRA: VALOR I ACCIONS */}
+          <div className="w-full lg:max-w-xl xl:max-w-2xl space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/70 text-emerald-800 text-xs font-semibold uppercase tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-[#00B050] animate-pulse"></span>
+              Plataforma Fiduciària d&apos;Intel·ligència Quantitativa
+            </div>
 
-        {/* COLUMNA DRETA: MARKET MONITOR AMB FILES CLICABLES */}
-        <div className="w-full lg:w-[560px] xl:w-[600px] shrink-0 bg-white rounded-2xl p-5 sm:p-5.5 border border-slate-200/90 shadow-[0_4px_24px_rgba(0,0,0,0.03)]">
-          <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-slate-100">
-            <div>
-              <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-900">
-                Market Monitor – Top 5 Fons
-              </h2>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Clica sobre qualsevol fons per obrir l&apos;auditoria
+            <div className="space-y-3">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.08]">
+                Eines per a <br />
+                <span className="text-[#00B050]">Inversors Intel·ligents</span>
+              </h1>
+              <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed max-w-lg">
+                Audita carteres d&apos;inversió, desemmascara comissions bancàries abusives i optimitza cap a solucions indexades de baix cost amb dades oficials de la CNMV i Lipper.
               </p>
             </div>
-            <span className="text-[10px] font-mono font-medium px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase tracking-wider">
-              CNMV Oficial
-            </span>
+
+            {/* BOTONS D'ACCIONS RÀPIDES */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Link
+                href="/funds"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00B050] hover:bg-[#009945] text-white text-xs sm:text-sm font-semibold shadow-xs transition-all hover:shadow-md cursor-pointer"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>Explorar Screener</span>
+                <ArrowRight className="w-4 h-4 ml-0.5" />
+              </Link>
+              <Link
+                href="/closet-indexing"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs sm:text-sm font-semibold shadow-xs transition-all hover:shadow-md cursor-pointer"
+              >
+                <ShieldAlert className="w-4 h-4 text-emerald-400" />
+                <span>Auditar Closet Indexing</span>
+              </Link>
+              <Link
+                href="/compare"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+              >
+                <ArrowLeftRight className="w-4 h-4 text-slate-400" />
+                <span>Comparador 1:1</span>
+              </Link>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                  <th scope="col" className="pb-2 pr-3 font-medium">Fons</th>
-                  <th scope="col" className="pb-2 px-2 text-center font-medium">1Y</th>
-                  <th scope="col" className="pb-2 px-2 text-center font-medium">3Y</th>
-                  <th scope="col" className="pb-2 pl-2 text-center font-medium">5Y</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {topSpanishFunds.map((fund) => (
-                  <tr 
-                    key={fund.isin} 
-                    className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
-                  >
-                    <td className="py-2.5 pr-3">
-                      <Link href={`/funds/${fund.isin}`} className="block">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-slate-900 text-xs sm:text-[13px] leading-snug line-clamp-1 group-hover:text-[#00B050] transition-colors">
-                            {fund.name}
-                          </span>
-                          <ArrowUpRight className="w-3 h-3 text-slate-400 group-hover:text-[#00B050] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[11px] text-slate-400 font-mono">
-                            {fund.isin}
-                          </span>
-                          <span className="text-slate-300">•</span>
-                          <span className="text-[11px] text-slate-500 font-medium">
-                            {fund.category}
-                          </span>
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="py-2.5 px-2 text-center align-middle">
-                      <Link href={`/funds/${fund.isin}`}>
-                        <span
-                          style={getBadgeStyle(fund.ret1Y)}
-                          className="inline-block min-w-[62px] px-2 py-1 rounded-md text-xs font-bold text-white shadow-xs"
-                        >
-                          +{fund.ret1Y.toFixed(2)}%
-                        </span>
-                      </Link>
-                    </td>
-                    <td className="py-2.5 px-2 text-center align-middle">
-                      <Link href={`/funds/${fund.isin}`}>
-                        <span
-                          style={getBadgeStyle(fund.ret3Y)}
-                          className="inline-block min-w-[62px] px-2 py-1 rounded-md text-xs font-bold text-white shadow-xs"
-                        >
-                          +{fund.ret3Y.toFixed(2)}%
-                        </span>
-                      </Link>
-                    </td>
-                    <td className="py-2.5 pl-2 text-center align-middle">
-                      <Link href={`/funds/${fund.isin}`}>
-                        <span
-                          style={getBadgeStyle(fund.ret5Y)}
-                          className="inline-block min-w-[62px] px-2 py-1 rounded-md text-xs font-bold text-white shadow-xs"
-                        >
-                          +{fund.ret5Y.toFixed(2)}%
-                        </span>
-                      </Link>
-                    </td>
+          {/* COLUMNA DRETA: MARKET MONITOR */}
+          <div className="w-full lg:w-[540px] xl:w-[580px] shrink-0 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <div>
+                <h2 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
+                  <span>Market Monitor</span>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-xs font-normal text-slate-500">Top 5 Fons Espanyols</span>
+                </h2>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Clica sobre qualsevol fons per obrir l&apos;auditoria completa
+                </p>
+              </div>
+              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-100 uppercase tracking-wider">
+                CNMV Oficial
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                    <th scope="col" className="pb-2.5 pr-2 font-medium">Vehicle</th>
+                    <th scope="col" className="pb-2.5 px-2 text-center font-medium">1 Any</th>
+                    <th scope="col" className="pb-2.5 px-2 text-center font-medium">3 Anys</th>
+                    <th scope="col" className="pb-2.5 pl-2 text-center font-medium">5 Anys</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {topSpanishFunds.map((fund) => (
+                    <tr 
+                      key={fund.isin} 
+                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                    >
+                      <td className="py-2.5 pr-2">
+                        <Link href={`/funds/${fund.isin}`} className="block">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors truncate max-w-[200px] sm:max-w-[240px]">
+                              {fund.name}
+                            </span>
+                            <ArrowUpRight className="w-3 h-3 text-slate-300 group-hover:text-emerald-600 transition-colors shrink-0" />
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            {fund.isin} · <span className="text-slate-500">{fund.category}</span>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="py-2.5 px-2 text-center align-middle">
+                        <Link href={`/funds/${fund.isin}`}>
+                          <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                            +{fund.ret1Y.toFixed(1)}%
+                          </span>
+                        </Link>
+                      </td>
+                      <td className="py-2.5 px-2 text-center align-middle">
+                        <Link href={`/funds/${fund.isin}`}>
+                          <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                            +{fund.ret3Y.toFixed(1)}%
+                          </span>
+                        </Link>
+                      </td>
+                      <td className="py-2.5 pl-2 text-center align-middle">
+                        <Link href={`/funds/${fund.isin}`}>
+                          <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                            +{fund.ret5Y.toFixed(1)}%
+                          </span>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span className="text-[11px] text-slate-400 font-mono">5.792 fons auditats</span>
+              <Link
+                href="/funds"
+                className="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:text-emerald-800 transition"
+              >
+                <span>Obrir Screener complet</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
 
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] text-slate-400">Univers de 5.792 fons auditat</span>
-            <Link
-              href="/funds"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#00B050] hover:text-[#009040] transition"
-            >
-              Explorar Catàleg & Screener
-              <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
         </div>
-      </main>
+      </section>
 
-      {/* 3. SECCIÓ 2: SALVAPANTALLES I MÈTRIQUES */}
-      <section className="w-full py-8 sm:py-12 bg-white">
-        <div className="max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-14 flex flex-col lg:flex-row justify-between items-center gap-8 lg:gap-14">
+      {/* 2. PILARS FIDUCIARIS & DADES OFICIALS */}
+      <section className="w-full py-12 sm:py-16 bg-white border-b border-slate-200/80">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row justify-between items-center gap-10 lg:gap-14">
           
-          <div className="w-full lg:max-w-xl xl:max-w-2xl relative flex items-center min-h-[340px] sm:min-h-[400px] overflow-visible">
+          {/* GRÀFIC MÖBIUS 3D */}
+          <div className="w-full lg:max-w-xl xl:max-w-2xl relative flex items-center min-h-[300px] sm:min-h-[360px] overflow-visible">
             <FlowingWave />
-            <div className="relative z-10 select-none space-y-2 sm:space-y-3 w-full">
-              <h2 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-950 flex items-baseline gap-1">
+            <div className="relative z-10 select-none space-y-2 w-full">
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-950 flex items-baseline gap-1">
                 Audita<span className="text-[#00B050]">.</span>
               </h2>
-              <h2 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-950 flex items-baseline gap-1">
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-950 flex items-baseline gap-1">
                 Compara<span className="text-[#00B050]">.</span>
               </h2>
-              <h2 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-950 flex items-baseline gap-1">
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-950 flex items-baseline gap-1">
                 Estalvia<span className="text-[#00B050]">.</span>
               </h2>
             </div>
           </div>
 
-          <div className="w-full lg:w-[560px] xl:w-[600px] shrink-0 flex flex-col justify-center space-y-8">
-            <div className="relative pt-4">
-              <div className="absolute -top-3 left-32 sm:left-40 flex items-center gap-2 pointer-events-none">
-                <span className="text-xs text-slate-400 font-medium">El secret més mal guardat</span>
-                <svg width="46" height="34" viewBox="0 0 46 34" fill="none" className="text-[#00B050] rotate-12">
-                  <path d="M4 4C14 2 34 8 40 26M40 26L34 22M40 26L42 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+          {/* 4 TARGETES DE MÈTRIQUES DE MERCAT */}
+          <div className="w-full lg:w-[540px] xl:w-[580px] shrink-0 space-y-6">
+            <div className="space-y-1">
+              <div className="text-xs font-mono font-semibold text-[#00B050] uppercase tracking-wider">
+                Auditoria de Mercat 360°
               </div>
-
-              <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-950 leading-[1.1]">
-                Suma&apos;t al <br />
-                <span className="text-[#00B050]">Rendiment Real</span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">
+                Transparència sense intermediaris
               </h2>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                Connectem directament amb el registre oficial de la CNMV i les carteres trimestrals de fons nacionals i internacionals.
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-x-8 gap-y-7">
-              <div>
-                <div className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">5.792</div>
-                <div className="text-sm sm:text-base text-slate-600 mt-1 font-medium">Fons Auditats</div>
+            <div className="grid grid-cols-2 gap-3.5">
+              <div className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 space-y-1">
+                <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5">
+                  <Database className="w-3.5 h-3.5 text-slate-400" />
+                  Univers de Fons
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">5.792</div>
+                <div className="text-[11px] text-slate-500">Registrats a CNMV & Lipper</div>
               </div>
-              <div>
-                <div className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">100%</div>
-                <div className="text-sm sm:text-base text-slate-600 mt-1 font-medium">Dades Oficials CNMV</div>
-              </div>
-              <div>
-                <div className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">111.172</div>
-                <div className="text-sm sm:text-base text-slate-600 mt-1 font-medium">Accions Subjacents</div>
-              </div>
-              <div>
-                <div className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">fins a 1,7%</div>
-                <div className="text-sm sm:text-base text-slate-600 mt-1 font-medium">Estalvi Mitjà en Comissions</div>
-              </div>
-            </div>
 
-            <div>
-              <Link
-                href="/portfolio"
-                className="inline-flex items-center gap-3 px-7 py-3.5 rounded-xl border border-slate-900 text-slate-950 hover:bg-slate-950 hover:text-white font-semibold text-sm transition-all duration-200 group"
-              >
-                <span>Comença a auditar</span>
-                <ArrowRight className="w-4 h-4 text-[#00B050] group-hover:translate-x-1 transition-transform" />
-              </Link>
+              <div className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 space-y-1">
+                <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                  Holdings Look-Through
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">111.172</div>
+                <div className="text-[11px] text-slate-500">Accions i títols desglossats</div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 space-y-1">
+                <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5">
+                  <Percent className="w-3.5 h-3.5 text-[#00B050]" />
+                  Estalvi en Comissions
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">fins a 1,7%</div>
+                <div className="text-[11px] text-slate-500">Reducció mitjana de costos TER</div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 space-y-1">
+                <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  Metodologia Fiduciària
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">100%</div>
+                <div className="text-[11px] text-slate-500">Cremers-Petajisto & MiFID II</div>
+              </div>
             </div>
           </div>
+
         </div>
       </section>
 
-      {/* 4. SECCIÓ BENTO GRID */}
-      <section className="w-full pt-4 pb-14 sm:pb-20 bg-white">
-        <div className="max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-14">
+      {/* 3. SUITE D'EINES (BENTO GRID UNIFICAT) */}
+      <section className="w-full py-12 sm:py-16">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-            <h2 className="text-4xl sm:text-5xl font-medium text-slate-900 tracking-tight">
-              Les nostres <span className="text-[#00B050] font-semibold">Eines d'Anàlisi</span>
-            </h2>
-            <Link
-              href="/closet-indexing"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#1F1F1F] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              Veure totes les eines
-              <ArrowRight className="w-4 h-4 text-[#00B050]" />
-            </Link>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200/80 pb-4">
+            <div>
+              <div className="text-xs font-mono font-semibold text-[#00B050] uppercase tracking-wider mb-1">
+                Eines d&apos;Anàlisi
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
+                Suite Integral d&apos;Optimització
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 max-w-md">
+              Des de l&apos;auditoria individual d&apos;un fons comercial fins a la construcció de carteres multi-actiu completes.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 auto-rows-[200px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             
-            {/* Targeta 1 (Gran Esquerra) */}
+            {/* TARGETA 1: CLOSET INDEXING AUDITOR (FLAGSHIP) */}
             <Link 
               href="/closet-indexing"
-              className="lg:col-span-2 lg:row-span-2 bg-[#0A0A0A] rounded-2xl p-7 sm:p-10 relative overflow-hidden flex flex-col text-white group block cursor-pointer"
+              className="lg:col-span-2 bg-slate-950 rounded-2xl p-6 sm:p-8 text-white relative overflow-hidden flex flex-col justify-between group hover:border-slate-800 border border-slate-900 transition-all shadow-sm"
             >
-              <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
-                <span className="absolute top-10 left-[45%] text-slate-500 font-light text-5xl">+</span>
-                <span className="absolute top-32 right-12 text-slate-400 font-light text-6xl">+</span>
-                <span className="absolute bottom-24 right-[30%] text-slate-500 font-light text-7xl">+</span>
-                <span className="absolute top-[60%] right-8 text-slate-500 font-light text-4xl">+</span>
-                <span className="absolute bottom-12 left-[20%] text-slate-600 font-light text-8xl">+</span>
-                <span className="absolute top-[25%] left-10 text-slate-500 font-light text-3xl">+</span>
-                <span className="absolute top-[5%] right-[20%] text-slate-600 font-light text-5xl">+</span>
-              </div>
-              
-              <div className="relative z-10 flex-1">
-                <h3 className="text-2xl sm:text-3xl font-semibold mb-3 leading-tight group-hover:text-emerald-400 transition-colors">
-                  Auditor de<br />Closet Indexing
+              <div className="space-y-4 max-w-xl">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider">
+                    Auditoria Insígnia
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">ACTIVE SHARE · CREMERS & PETAJISTO</span>
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
+                  Auditor de Closet Indexing
                 </h3>
-              </div>
-              <div className="relative z-10 max-w-[420px]">
-                <p className="text-slate-300 text-sm leading-relaxed">
-                  Analitzar l&apos;Active Share és el procés d&apos;avaluar si un fons de gestió activa es limita a clonar l&apos;índex. T&apos;ajuda a auditar el cost real de la teva inversió, desemmascarar comissions abusives i optimitzar la rendibilitat futura.
+                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                  Avalua acció per acció si un fons comercial de gestió activa es limita a copiar el seu índex de referència cobrant comissions desmesurades. Descobreix el teu Active Share real i el cost efectiu de la gestió.
                 </p>
               </div>
+
+              <div className="pt-6 mt-6 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-4 text-slate-400 font-mono text-[11px]">
+                  <span>Solapament de Holdings</span>
+                  <span>•</span>
+                  <span>Tracking Error</span>
+                  <span>•</span>
+                  <span>Informe PDF MiFID II</span>
+                </div>
+                <div className="inline-flex items-center gap-1 font-semibold text-emerald-400 group-hover:translate-x-1 transition-transform">
+                  <span>Auditar ara</span>
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </div>
             </Link>
 
-            {/* Targeta 2 (Mitjana Dalt) */}
+            {/* TARGETA 2: SMART SWITCH */}
             <Link
               href="/optimize"
-              className="col-span-1 row-span-1 bg-[#00B050] rounded-2xl p-6 flex flex-col justify-between group cursor-pointer hover:bg-[#009945] transition-colors block"
+              className="bg-white rounded-2xl p-6 border border-slate-200/90 hover:border-emerald-300 flex flex-col justify-between group transition-all shadow-2xs hover:shadow-md cursor-pointer"
             >
-              <p className="text-emerald-50 text-[13px] leading-relaxed pr-4 font-medium">
-                Troba i compara alternatives indexades de baix cost per optimitzar la teva cartera instantàniament.
-              </p>
-              <h3 className="text-xl font-semibold text-white mt-4 flex items-center justify-between">
-                <span>Smart<br />Switch</span>
-                <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-              </h3>
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#00B050]">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-950 group-hover:text-emerald-700 transition-colors">
+                  Smart Switch
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Troba alternatives indexades homologades de baix cost per a qualsevol fons comercial tradicional, preservant l&apos;exposició sectorial i retallant fins a un 80% les comissions.
+                </p>
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Optimitzador TER</span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#00B050] group-hover:translate-x-1 transition-all" />
+              </div>
             </Link>
 
-            {/* Targeta 3 (Alta Dreta) */}
+            {/* TARGETA 3: COMPARADOR CARA A CARA */}
+            <Link
+              href="/compare"
+              className="bg-white rounded-2xl p-6 border border-slate-200/90 hover:border-emerald-300 flex flex-col justify-between group transition-all shadow-2xs hover:shadow-md cursor-pointer"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                  <ArrowLeftRight className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-950 group-hover:text-emerald-700 transition-colors">
+                  Comparador Cara a Cara
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Enfronta dos vehicles 1:1: compara la sèrie històrica diària oficial, calcula el solapament microscòpic de títols compartits i avalua si són duplicats o diversificadors reals.
+                </p>
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Diagnòstic 1:1</span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#00B050] group-hover:translate-x-1 transition-all" />
+              </div>
+            </Link>
+
+            {/* TARGETA 4: PORTFOLIO BUILDER */}
             <Link
               href="/portfolio"
-              className="col-span-1 row-span-2 bg-[#ECFDF5] border border-emerald-100/80 rounded-2xl p-6 flex flex-col justify-start group hover:border-emerald-300 transition-colors block"
+              className="bg-white rounded-2xl p-6 border border-slate-200/90 hover:border-emerald-300 flex flex-col justify-between group transition-all shadow-2xs hover:shadow-md cursor-pointer"
             >
-              <h3 className="text-xl font-semibold text-slate-950 mb-4 group-hover:text-[#00B050] transition-colors">
-                Portfolio<br />Builder
-              </h3>
-              <p className="text-slate-600 text-[13px] leading-relaxed">
-                Eines d&apos;assignació de carteres basades en el solapament real d&apos;actius. Construeix el teu portfolio consolidant les primeres posicions, identificant la concentració de riscos i evitant duplicitats innecessàries per a una millor diversificació.
-              </p>
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-950 group-hover:text-emerald-700 transition-colors">
+                  Portfolio Builder
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Assignació multi-actiu d&apos;alta precisió. Construeix la teva cartera personalitzada amb optimització MPT Markowitz, look-through geogràfic i sectorial, i backtest històric real.
+                </p>
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Markowitz & Look-Through</span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#00B050] group-hover:translate-x-1 transition-all" />
+              </div>
             </Link>
 
-            {/* Targeta 4 (Mitjana Baix) */}
+            {/* TARGETA 5: SIMULADOR DE TER */}
             <Link
               href="/simulator"
-              className="col-span-1 row-span-1 bg-[#F1F4F9] rounded-2xl p-6 flex flex-col justify-between group hover:bg-slate-100 transition-colors block"
+              className="bg-white rounded-2xl p-6 border border-slate-200/90 hover:border-emerald-300 flex flex-col justify-between group transition-all shadow-2xs hover:shadow-md cursor-pointer"
             >
-              <p className="text-slate-600 text-[13px] leading-relaxed pr-2">
-                Modela l&apos;impacte de les comissions a llarg termini i entén clarament l&apos;erosió patrimonial del teu capital.
-              </p>
-              <h3 className="text-xl font-semibold text-slate-950 mt-4 flex items-center justify-between">
-                <span>Simulador<br />de TER</span>
-                <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-slate-700" />
-              </h3>
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                  <Calculator className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-950 group-hover:text-emerald-700 transition-colors">
+                  Simulador de TER
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Modela l&apos;impacte de l&apos;interès compost i l&apos;erosió patrimonial causada per les comissions de gestió a 10, 20 i 30 anys vista. Entén quants milers d&apos;euros es perden en costos.
+                </p>
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Model de Capitalització</span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#00B050] group-hover:translate-x-1 transition-all" />
+              </div>
             </Link>
 
           </div>

@@ -114,13 +114,13 @@ function OptimizeContent() {
   const estalviTotal = capAlt - capSrc;
 
   return (
-    <div className="bg-white flex flex-col font-sans">
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 sm:px-10 lg:px-14 py-8 space-y-8">
+    <div className="bg-[#F8FAFC] min-h-screen flex flex-col font-sans pb-16">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
         {/* TITULAR EDITORIAL */}
-        <div className="space-y-2 border-b border-slate-100 pb-6">
+        <div className="space-y-2 border-b border-slate-200/80 pb-6">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-[#00B050] border border-emerald-100 uppercase tracking-wider">
+            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/70 uppercase tracking-wider">
               Rèplica Passiva & Reducció de Comissions
             </span>
             <span className="text-xs text-slate-400 font-mono">UCITS / Lipper Database</span>
@@ -134,7 +134,7 @@ function OptimizeContent() {
         </div>
 
         {/* SELECTOR I FORMULARI D'ANÀLISI BENTO */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-5">
+        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-5">
           <form onSubmit={(e) => handleSearch(query, minOverlap, e)} className="grid grid-cols-1 lg:grid-cols-[1fr,240px,auto] gap-4 items-end">
             
             {/* Input amb autocompletat */}

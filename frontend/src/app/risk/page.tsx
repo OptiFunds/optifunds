@@ -101,14 +101,14 @@ export default function RiskReturnPage() {
   }), [data]);
 
   return (
-    <div className="bg-white flex flex-col font-sans">
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 sm:px-10 lg:px-14 py-8 space-y-8">
+    <div className="bg-[#F8FAFC] min-h-screen flex flex-col font-sans pb-16">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
         {/* TITULAR EDITORIAL */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
           <div className="space-y-2 max-w-2xl">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-[#00B050] border border-emerald-100 uppercase tracking-wider">
+              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/70 uppercase tracking-wider">
                 Univers de Risc & Rendibilitat // UCITS
               </span>
               <span className="text-xs text-slate-400 font-mono">SHARPE GRADIENT</span>
@@ -121,14 +121,14 @@ export default function RiskReturnPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 text-xs font-mono text-slate-700 shadow-2xs shrink-0 self-start sm:self-center">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-mono text-slate-700 shadow-2xs shrink-0 self-start sm:self-center">
             <span className="text-slate-400">Mostra:</span>
             <span className="font-bold text-[#00B050]">{data.length} Vehicles</span>
           </div>
         </div>
 
         {/* CONTENIDOR DEL GRÀFIC BENTO */}
-        <div className="bg-white border border-slate-200/90 shadow-2xs p-6 sm:p-8 rounded-3xl space-y-4">
+        <div className="bg-white border border-slate-200/90 shadow-2xs p-6 sm:p-8 rounded-2xl space-y-4">
           <div className="flex justify-between items-center border-b border-slate-100 pb-4">
             <div>
               <h3 className="text-base font-bold text-slate-900">

@@ -397,8 +397,8 @@ function CompareContent() {
 
 
   return (
-    <div className="bg-white flex flex-col font-sans">
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 sm:px-10 lg:px-14 py-8 space-y-8">
+    <div className="bg-[#F8FAFC] min-h-screen flex flex-col font-sans pb-16">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
         {/* TITULAR EDITORIAL I RETORN */}
         <div className="space-y-4 border-b border-slate-100 pb-6">
@@ -477,7 +477,7 @@ function CompareContent() {
             )}
 
             {/* Fons 1 */}
-            <div className="bg-white border-2 border-blue-200/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 relative">
+            <div className="bg-white border border-slate-200/90 hover:border-slate-300 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 relative">
               <div className="flex justify-between items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <FundSearchSelect
@@ -524,7 +524,7 @@ function CompareContent() {
             </div>
 
             {/* Fons 2 */}
-            <div className="bg-white border-2 border-emerald-300 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 relative">
+            <div className="bg-white border border-slate-200/90 hover:border-slate-300 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 relative">
               <div className="flex justify-between items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <FundSearchSelect

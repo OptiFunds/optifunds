@@ -339,12 +339,12 @@ export default function FundDetailPage() {
   const alternativesList = Array.isArray(alternatives) ? alternatives : [];
 
   return (
-    <div className="bg-white flex flex-col font-sans">
+    <div className="bg-[#F8FAFC] min-h-screen flex flex-col font-sans pb-16">
       {/* COS PRINCIPAL DE LA FITXA */}
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 sm:px-10 lg:px-14 py-8 space-y-8">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
         {/* ENCAPÇALAMENT: NOM DEL FONS EN NEGRETA A DALT I DADES A BAIX */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-200/80">
           <div className="space-y-3 max-w-3xl">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-950 tracking-tight leading-snug">
               {profile.name || profile.fund_name}

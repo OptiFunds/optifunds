@@ -209,9 +209,9 @@ export default function FundsScreenerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFBFC] text-slate-900 font-sans pb-20">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans pb-20">
       {/* 1. HERO CAPÇALERA */}
-      <section className="bg-white border-b border-slate-200/80 pt-8 pb-8 px-4 sm:px-8 lg:px-12">
+      <section className="bg-white border-b border-slate-200/80 pt-8 pb-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1600px] mx-auto">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
@@ -275,7 +275,7 @@ export default function FundsScreenerPage() {
       </section>
 
       {/* 2. BARRA DE CERCA I FILTRES */}
-      <section className="max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 pt-6">
+      <section className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 sm:p-5 space-y-4">
           {/* Línia superior: Cerca, Gestora, Toggle CNMV, Filtres Avançats */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
@@ -530,7 +530,7 @@ export default function FundsScreenerPage() {
       </section>
 
       {/* 3. TAULA PRINCIPAL DE FONS */}
-      <section className="max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 pt-5">
+      <section className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pt-5">
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
           {/* Capçalera informativa de la taula */}
           <div className="px-5 py-3.5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">

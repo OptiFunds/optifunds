@@ -115,14 +115,14 @@ function ClosetIndexingContent() {
   }, {} as Record<string, BenchmarkItem[]>);
 
   return (
-    <div className="bg-white flex flex-col font-sans">
+    <div className="bg-[#F8FAFC] min-h-screen flex flex-col font-sans pb-16">
       {/* COS DE LA PÀGINA */}
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 sm:px-10 lg:px-14 py-8 space-y-8">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
         {/* TITULAR EDITORIAL */}
-        <div className="space-y-2 border-b border-slate-100 pb-6">
+        <div className="space-y-2 border-b border-slate-200/80 pb-6">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-[#00B050] border border-emerald-100">
+            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/70">
               Metodologia Cremers & Petajisto
             </span>
             <span className="text-xs text-slate-400 font-mono">UCITS COMPLIANT</span>
@@ -136,7 +136,7 @@ function ClosetIndexingContent() {
         </div>
 
         {/* SELECTORS DINÀMICS BENTO AMB BENCHMARK INTEL·LIGENT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs">
           
           {/* Fons a Auditar */}
           <div className="space-y-2">
@@ -206,10 +206,10 @@ function ClosetIndexingContent() {
             
             {/* BANNER DE DIAGNÒSTIC FIDUCIARI */}
             <div
-              className={`p-6 rounded-3xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all ${
+              className={`p-6 rounded-2xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all ${
                 audit.is_closet_indexer
                   ? "bg-amber-50/80 border-amber-200 text-amber-900"
-                  : "bg-[#D1F7E2]/50 border-[#00B050]/30 text-[#075426]"
+                  : "bg-emerald-50/80 border-emerald-200/80 text-emerald-950"
               }`}
             >
               <div className="flex items-start gap-3.5">

@@ -9,6 +9,20 @@
   }
 }
 
+/* Design System Utilities */
+.panel-card {
+  background-color: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.panel-card-hover:hover {
+  border-color: rgba(203, 213, 225, 1);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+}
+
 .card-clean {
   background-color: #FFFFFF;
   border: 1px solid #E2E8F0;
@@ -18,4 +32,28 @@
 
 .card-clean:hover {
   border-color: #CBD5E1;
+}
+
+/* Scrollbar fina i elegant */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }

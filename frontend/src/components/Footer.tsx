@@ -43,6 +43,16 @@ export function Footer() {
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
+                <Link href="/funds" className="hover:text-emerald-400 transition-colors flex items-center gap-1">
+                  <span>Catàleg & Screener de Fons</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/compare" className="hover:text-emerald-400 transition-colors flex items-center gap-1">
+                  <span>Comparador Cara a Cara 1:1</span>
+                </Link>
+              </li>
+              <li>
                 <Link href="/closet-indexing" className="hover:text-emerald-400 transition-colors flex items-center gap-1">
                   <span>Closet Indexing Auditor</span>
                 </Link>

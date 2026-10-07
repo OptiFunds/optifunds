@@ -774,13 +774,13 @@ function PortfolioContent() {
   }, [backtestData, showDrawdownChart]);
 
   return (
-    <div className="bg-white flex flex-col font-sans">
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 sm:px-10 lg:px-14 py-8 space-y-8">
+    <div className="bg-[#F8FAFC] min-h-screen flex flex-col font-sans pb-16">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
         {/* TITULAR EDITORIAL */}
-        <div className="space-y-2 border-b border-slate-100 pb-6">
+        <div className="space-y-2 border-b border-slate-200/80 pb-6">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-[#00B050] border border-emerald-100 uppercase tracking-wider">
+            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/70 uppercase tracking-wider">
               Modern Portfolio Theory // MPT 360°
             </span>
             <span className="text-xs text-slate-400 font-mono">GLOBAL LOOK-THROUGH & ALLOCATION</span>

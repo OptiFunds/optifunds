@@ -16,19 +16,33 @@ import {
   ArrowRight,
   Compass,
   BarChart3,
-  ArrowLeftRight
+  ArrowLeftRight,
+  ChevronDown
 } from "lucide-react";
 import { searchFunds, FundSummary } from "@/lib/api";
 
-const NAV_LINKS = [
+const PRIMARY_NAV_LINKS = [
   { href: "/", label: "Inici", icon: Compass },
-  { href: "/funds", label: "Screener de Fons", icon: BarChart3 },
+  { href: "/funds", label: "Screener", icon: BarChart3 },
   { href: "/compare", label: "Comparador", icon: ArrowLeftRight },
   { href: "/closet-indexing", label: "Closet Indexing", icon: ShieldAlert },
   { href: "/optimize", label: "Smart Switch", icon: Sparkles },
-  { href: "/portfolio", label: "Portfolio Builder", icon: Layers },
-  { href: "/simulator", label: "Simulador TER", icon: Calculator },
-  { href: "/risk", label: "Frontera de Risc", icon: Activity },
+  { href: "/portfolio", label: "Carteres", icon: Layers },
+];
+
+const MORE_NAV_LINKS = [
+  { 
+    href: "/simulator", 
+    label: "Simulador de TER", 
+    desc: "Impacte acumulatiu de comissions", 
+    icon: Calculator 
+  },
+  { 
+    href: "/risk", 
+    label: "Frontera de Risc", 
+    desc: "Univers Markowitz risc-rendibilitat", 
+    icon: Activity 
+  },
 ];
 
 export function Navbar() {
@@ -39,9 +53,11 @@ export function Navbar() {
   const [results, setResults] = useState<FundSummary[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const searchRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Cmd+K shortcut per enfocar la cerca ràpidament
@@ -51,6 +67,10 @@ export function Navbar() {
         e.preventDefault();
         searchInputRef.current?.focus();
         setIsOpen(true);
+      }
+      if (e.key === "Escape") {
+        setIsOpen(false);
+        setMoreMenuOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -80,30 +100,36 @@ export function Navbar() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Tancar desplegable en fer clic fora
+  // Tancar desplegables en fer clic fora
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setMoreMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Tancar menú mòbil en canviar de ruta
+  // Tancar menús en canviar de ruta
   useEffect(() => {
     setMobileMenuOpen(false);
     setIsOpen(false);
+    setMoreMenuOpen(false);
   }, [pathname]);
 
+  const isMoreActive = MORE_NAV_LINKS.some(link => pathname.startsWith(link.href));
+
   return (
-    <header className="w-full border-b border-slate-100 bg-white/95 backdrop-blur-md sticky top-0 z-50 transition-all">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 py-3 flex items-center justify-between gap-4">
+    <header className="w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md sticky top-0 z-50">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         
-        {/* LOGO */}
-        <div className="flex items-center gap-6">
-          <Link href="/" className="relative h-9 sm:h-10 w-40 sm:w-48 shrink-0 flex items-center">
+        {/* LOGO & PRIMARY NAV */}
+        <div className="flex items-center gap-6 xl:gap-8">
+          <Link href="/" className="relative h-9 w-36 sm:w-44 shrink-0 flex items-center">
             <Image
               src="/logo-optifunds.jpg"
               alt="OptiFunds"
@@ -114,18 +140,20 @@ export function Navbar() {
             />
           </Link>
 
-          {/* ENLLAÇOS DE NAVEGACIÓ (DESKTOP) */}
-          <nav className="hidden xl:flex items-center gap-1">
-            {NAV_LINKS.map((link) => {
-              const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
+          {/* DESKTOP NAV */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {PRIMARY_NAV_LINKS.map((link) => {
+              const isActive = link.href === "/" 
+                ? pathname === "/" 
+                : pathname === link.href || pathname.startsWith(link.href + "/");
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 ${
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
                     isActive
-                      ? "bg-emerald-50 text-[#00B050] border border-emerald-200/80 shadow-2xs font-bold"
-                      : "text-slate-600 hover:text-slate-950 hover:bg-slate-50"
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200/70 shadow-2xs font-bold"
+                      : "text-slate-600 hover:text-slate-950 hover:bg-slate-100/70"
                   }`}
                 >
                   <link.icon className={`w-3.5 h-3.5 ${isActive ? "text-[#00B050]" : "text-slate-400"}`} />
@@ -133,14 +161,57 @@ export function Navbar() {
                 </Link>
               );
             })}
+
+            {/* DESPLEGABLE MÉS EINES */}
+            <div ref={moreMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  isMoreActive
+                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200/70 shadow-2xs font-bold"
+                    : "text-slate-600 hover:text-slate-950 hover:bg-slate-100/70"
+                }`}
+              >
+                <span>Eines</span>
+                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${moreMenuOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {moreMenuOpen && (
+                <div className="absolute top-full left-0 mt-1.5 w-60 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+                  <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
+                    Eines Quantitatives
+                  </div>
+                  {MORE_NAV_LINKS.map((item) => {
+                    const isActive = pathname.startsWith(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMoreMenuOpen(false)}
+                        className={`flex items-start gap-2.5 p-2 rounded-lg transition-colors ${
+                          isActive ? "bg-emerald-50 text-emerald-900" : "hover:bg-slate-50 text-slate-700"
+                        }`}
+                      >
+                        <item.icon className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? "text-[#00B050]" : "text-slate-400"}`} />
+                        <div>
+                          <div className="text-xs font-semibold">{item.label}</div>
+                          <div className="text-[11px] text-slate-400 leading-tight">{item.desc}</div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </nav>
         </div>
 
-        {/* ZONA DE CERCA GLOBAL + STATUS ENGINE */}
-        <div className="flex items-center gap-3 sm:gap-4 flex-1 max-w-md justify-end">
+        {/* ZONA DE CERCA GLOBAL + STATUS DUCKDB */}
+        <div className="flex items-center gap-3 flex-1 max-w-sm justify-end">
           
           {/* CERCADOR INSTANTANI AMB CMD+K */}
-          <div ref={searchRef} className="relative w-full max-w-xs sm:max-w-sm">
+          <div ref={searchRef} className="relative w-full">
             <div className="relative flex items-center">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
               <input
@@ -152,18 +223,18 @@ export function Navbar() {
                 onFocus={() => {
                   if (results.length > 0) setIsOpen(true);
                 }}
-                className="w-full pl-9 pr-12 py-1.5 bg-slate-50 hover:bg-slate-100/80 focus:bg-white text-xs text-slate-900 placeholder:text-slate-400 rounded-full border border-slate-200/80 focus:border-[#00B050] focus:ring-1 focus:ring-[#00B050] focus:outline-none transition-all shadow-2xs"
+                className="w-full pl-9 pr-12 py-1.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white text-xs text-slate-900 placeholder:text-slate-400 rounded-lg border border-slate-200 focus:border-[#00B050] focus:ring-2 focus:ring-[#00B050]/15 focus:outline-hidden transition-all shadow-2xs"
               />
-              <kbd className="absolute right-2.5 text-[9px] font-mono text-slate-400 pointer-events-none border border-slate-200 rounded px-1.5 py-0.5 bg-white shadow-2xs hidden sm:inline-block">
+              <kbd className="absolute right-2 text-[9px] font-mono text-slate-400 pointer-events-none border border-slate-200 rounded px-1.5 py-0.5 bg-white shadow-2xs hidden sm:inline-block">
                 ⌘K
               </kbd>
             </div>
 
             {/* DESPLEGABLE DE RESULTATS */}
             {isOpen && results.length > 0 && (
-              <div className="absolute top-full right-0 left-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-2 z-50 max-h-80 overflow-y-auto divide-y divide-slate-100">
+              <div className="absolute top-full right-0 left-0 mt-1.5 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 max-h-80 overflow-y-auto divide-y divide-slate-100">
                 <div className="px-3.5 py-1 text-[10px] font-mono uppercase text-slate-400 font-semibold tracking-wider">
-                  Resultats de mercat Lipper / CNMV
+                  Resultats de Fons
                 </div>
                 {results.map((f) => (
                   <button
@@ -173,10 +244,10 @@ export function Navbar() {
                       setQuery("");
                       router.push(`/funds/${f.isin}`);
                     }}
-                    className="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50/50 flex items-center justify-between text-xs transition-colors group cursor-pointer"
+                    className="w-full text-left px-3.5 py-2 hover:bg-emerald-50/60 flex items-center justify-between text-xs transition-colors group cursor-pointer"
                   >
                     <div className="pr-2 truncate">
-                      <div className="font-semibold text-slate-900 group-hover:text-[#00B050] transition-colors truncate">
+                      <div className="font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
                         {f.fund_name}
                       </div>
                       <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
@@ -200,19 +271,19 @@ export function Navbar() {
             )}
           </div>
 
-          {/* INDICADOR EN DIRECTE DUCKDB */}
-          <div className="hidden md:flex items-center gap-2 pl-1 text-[11px] font-mono text-slate-500 shrink-0">
+          {/* INDICADOR DUCKDB ENGINE */}
+          <div className="hidden xl:flex items-center gap-1.5 pl-1 text-[10px] font-mono text-slate-500 shrink-0 border-l border-slate-200 pl-3">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00B050]"></span>
             </span>
-            <span className="hidden lg:inline font-medium text-slate-600">DuckDB</span>
+            <span className="font-medium text-slate-600">DuckDB</span>
           </div>
 
-          {/* BOTÓ MENÚ MÒBIL / TABLET */}
+          {/* BOTÓ MENÚ MÒBIL */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="xl:hidden p-2 rounded-xl text-slate-600 hover:text-slate-950 hover:bg-slate-100 transition-colors"
+            className="lg:hidden p-2 rounded-lg text-slate-600 hover:text-slate-950 hover:bg-slate-100 transition-colors"
             aria-label="Menú de navegació"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -221,29 +292,66 @@ export function Navbar() {
 
       </div>
 
-      {/* MENÚ DESPLEGABLE MÒBIL */}
+      {/* MENÚ MÒBIL / TABLET */}
       {mobileMenuOpen && (
-        <div className="xl:hidden border-t border-slate-100 bg-white px-4 py-4 space-y-1 shadow-lg animate-in slide-in-from-top-2 duration-200">
-          {NAV_LINKS.map((link) => {
-            const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
-                  isActive
-                    ? "bg-emerald-50 text-[#00B050] font-bold border border-emerald-200/60"
-                    : "text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <link.icon className={`w-4 h-4 ${isActive ? "text-[#00B050]" : "text-slate-400"}`} />
-                  <span>{link.label}</span>
-                </div>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-300" />
-              </Link>
-            );
-          })}
+        <div className="lg:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-4 shadow-lg animate-in slide-in-from-top-2 duration-150">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold px-2 mb-1">
+              Plataforma Principal
+            </div>
+            <div className="space-y-0.5">
+              {PRIMARY_NAV_LINKS.map((link) => {
+                const isActive = link.href === "/" 
+                  ? pathname === "/" 
+                  : pathname === link.href || pathname.startsWith(link.href + "/");
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                      isActive
+                        ? "bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60"
+                        : "text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <link.icon className={`w-4 h-4 ${isActive ? "text-[#00B050]" : "text-slate-400"}`} />
+                      <span>{link.label}</span>
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 text-slate-300" />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold px-2 mb-1">
+              Eines Quantitatives
+            </div>
+            <div className="space-y-0.5">
+              {MORE_NAV_LINKS.map((link) => {
+                const isActive = pathname.startsWith(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                      isActive
+                        ? "bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60"
+                        : "text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <link.icon className={`w-4 h-4 ${isActive ? "text-[#00B050]" : "text-slate-400"}`} />
+                      <span>{link.label}</span>
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 text-slate-300" />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </header>
