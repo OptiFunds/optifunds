@@ -14,12 +14,16 @@ import {
   Calculator, 
   Activity, 
   ArrowRight,
-  Compass
+  Compass,
+  BarChart3,
+  ArrowLeftRight
 } from "lucide-react";
 import { searchFunds, FundSummary } from "@/lib/api";
 
 const NAV_LINKS = [
   { href: "/", label: "Inici", icon: Compass },
+  { href: "/funds", label: "Screener de Fons", icon: BarChart3 },
+  { href: "/compare", label: "Comparador", icon: ArrowLeftRight },
   { href: "/closet-indexing", label: "Closet Indexing", icon: ShieldAlert },
   { href: "/optimize", label: "Smart Switch", icon: Sparkles },
   { href: "/portfolio", label: "Portfolio Builder", icon: Layers },

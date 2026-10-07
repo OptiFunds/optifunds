@@ -609,4 +609,98 @@ export async function fetchFundHistory(
   return res.json();
 }
 
+// ==========================================
+// SCREENER I CATÀLEG HISTÒRIC DE FONS
+// ==========================================
+export interface ScreenerFund {
+  isin: string;
+  fund_name: string;
+  management_company: string;
+  asset_class: string;
+  asset_class_group: string;
+  ter: number;
+  management_fee?: number;
+  ret_1y: number | null;
+  cagr_3y: number | null;
+  cagr_5y: number | null;
+  cagr_10y: number | null;
+  volatility: number | null;
+  max_drawdown: number | null;
+  sharpe_ratio: number | null;
+  has_cnmv_history: boolean;
+  history_years: number;
+  history_start_date: string | null;
+  history_end_date: string | null;
+  history_data_points: number;
+}
+
+export interface ScreenerFilterOptions {
+  name: string;
+  count: number;
+}
+
+export interface ScreenerUniverseStats {
+  total_universe: number;
+  total_cnmv_funds: number;
+  total_cnmv_10y: number;
+  avg_ter: number;
+  avg_cagr_10y: number;
+  avg_volatility: number;
+}
+
+export interface ScreenerResponse {
+  funds: ScreenerFund[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  universe_stats: ScreenerUniverseStats;
+  categories: ScreenerFilterOptions[];
+  managers: ScreenerFilterOptions[];
+}
+
+export interface ScreenerParams {
+  q?: string;
+  category?: string;
+  manager?: string;
+  only_cnmv?: boolean;
+  min_ret_1y?: number;
+  min_ret_3y?: number;
+  min_ret_5y?: number;
+  min_ret_10y?: number;
+  max_ter?: number;
+  min_sharpe?: number;
+  max_volatility?: number;
+  sort_by?: string;
+  sort_order?: "asc" | "desc";
+  page?: number;
+  page_size?: number;
+}
+
+export async function fetchFundsScreener(params: ScreenerParams = {}): Promise<ScreenerResponse> {
+  const query = new URLSearchParams();
+  if (params.q) query.set("q", params.q);
+  if (params.category) query.set("category", params.category);
+  if (params.manager) query.set("manager", params.manager);
+  if (params.only_cnmv) query.set("only_cnmv", "true");
+  if (params.min_ret_1y !== undefined) query.set("min_ret_1y", String(params.min_ret_1y));
+  if (params.min_ret_3y !== undefined) query.set("min_ret_3y", String(params.min_ret_3y));
+  if (params.min_ret_5y !== undefined) query.set("min_ret_5y", String(params.min_ret_5y));
+  if (params.min_ret_10y !== undefined) query.set("min_ret_10y", String(params.min_ret_10y));
+  if (params.max_ter !== undefined) query.set("max_ter", String(params.max_ter));
+  if (params.min_sharpe !== undefined) query.set("min_sharpe", String(params.min_sharpe));
+  if (params.max_volatility !== undefined) query.set("max_volatility", String(params.max_volatility));
+  if (params.sort_by) query.set("sort_by", params.sort_by);
+  if (params.sort_order) query.set("sort_order", params.sort_order);
+  if (params.page) query.set("page", String(params.page));
+  if (params.page_size) query.set("page_size", String(params.page_size));
+
+  const res = await fetch(`${API_BASE}/funds/screener?${query.toString()}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Error consultant el catàleg de fons" }));
+    throw new Error(err.detail || "Error consultant el catàleg de fons");
+  }
+  return res.json();
+}
+
 

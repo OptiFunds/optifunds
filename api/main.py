@@ -14,6 +14,7 @@ import numpy as np
 import duckdb
 
 from modules.optimizer import find_cheaper_alternatives
+from modules.screener_engine import query_screener, build_screener_master
 
 app = FastAPI(
     title="OptiFunds Analytics API",
@@ -138,6 +139,46 @@ def search_funds(q: str = ""):
     """
     df = con.execute(query).df()
     return df.to_dict(orient="records")
+
+
+@app.get("/api/v1/funds/screener")
+def get_funds_screener(
+    q: str = "",
+    category: str = "",
+    manager: str = "",
+    only_cnmv: bool = False,
+    min_ret_1y: Optional[float] = None,
+    min_ret_3y: Optional[float] = None,
+    min_ret_5y: Optional[float] = None,
+    min_ret_10y: Optional[float] = None,
+    max_ter: Optional[float] = None,
+    min_sharpe: Optional[float] = None,
+    max_volatility: Optional[float] = None,
+    sort_by: str = "cagr_10y",
+    sort_order: str = "desc",
+    page: int = 1,
+    page_size: int = 25
+):
+    try:
+        return query_screener(
+            q=q,
+            category=category,
+            manager=manager,
+            only_cnmv=only_cnmv,
+            min_ret_1y=min_ret_1y,
+            min_ret_3y=min_ret_3y,
+            min_ret_5y=min_ret_5y,
+            min_ret_10y=min_ret_10y,
+            max_ter=max_ter,
+            min_sharpe=min_sharpe,
+            max_volatility=max_volatility,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            page=page,
+            page_size=page_size
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/v1/analytics/risk-return")

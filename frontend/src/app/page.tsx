@@ -170,6 +170,17 @@ export default function HomePage() {
               </tbody>
             </table>
           </div>
+
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-[11px] text-slate-400">Univers de 5.792 fons auditat</span>
+            <Link
+              href="/funds"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[#00B050] hover:text-[#009040] transition"
+            >
+              Explorar Catàleg & Screener
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
         </div>
       </main>
 
