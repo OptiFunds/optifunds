@@ -133,16 +133,16 @@ export default function SimulatorPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-200/80 pb-6">
           <div className="space-y-2 max-w-2xl">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-[#00B050] border border-emerald-100 uppercase tracking-wider">
-                Model d'Interès Compost & MiFID II
+              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wider">
+                Model d&apos;Interès Compost (MiFID II)
               </span>
-              <span className="text-xs text-slate-400 font-mono">COST TRANSPARENCY</span>
+              <span className="text-xs text-slate-400 font-mono">PROJECCIÓ DE COSTOS ACUMULATS</span>
             </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-950 tracking-tight leading-snug">
-              Simulador d'Erosió per <span className="text-[#00B050]">Comissions (TER)</span>
+              Simulador d&apos;Impacte de Comissions (TER)
             </h1>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Quantificació matemàtica de la pèrdua de capital a llarg termini per l'efecte continuat de costos de gestió bancària.
+              Modelització matemàtica de l&apos;impacte temporal de les comissions de gestió i despeses corrents sobre el capital net acumulat en diferents horitzons temporals.
             </p>
           </div>
 

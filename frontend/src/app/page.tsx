@@ -1,191 +1,523 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { 
   ArrowRight, 
   ArrowUpRight, 
-  ShieldAlert, 
+  ShieldCheck, 
   Sparkles, 
   Layers, 
   Calculator, 
   ArrowLeftRight,
   BarChart3,
-  CheckCircle2,
   TrendingUp,
   Percent,
-  Database
+  Database,
+  Search,
+  Activity,
+  CheckCircle2,
+  FileSpreadsheet
 } from "lucide-react";
-import { FlowingWave } from "@/components/FlowingWave";
 
-interface TopSpanishFund {
+interface TopFundItem {
   name: string;
   isin: string;
+  manager: string;
   category: string;
+  ter: number;
   ret1Y: number;
   ret3Y: number;
   ret5Y: number;
+  sharpe: number;
 }
 
-const topSpanishFunds: TopSpanishFund[] = [
+const MARKET_TICKERS = [
+  { name: "IBEX 35 Net TR", value: "11.840 pts", change: "+14.2% 1A", isPositive: true },
+  { name: "S&P 500 Index", value: "5.850 pts", change: "+21.8% 1A", isPositive: true },
+  { name: "MSCI World Net TR", value: "3.710 pts", change: "+19.4% 1A", isPositive: true },
+  { name: "Euro Stoxx 50", value: "4.980 pts", change: "+12.6% 1A", isPositive: true },
+  { name: "Euríbor 12M", value: "2.68%", change: "-1.48% 1A", isPositive: false },
+];
+
+const MONITORED_FUNDS: TopFundItem[] = [
   {
     name: "CaixaBank Comunicació Mundial FI",
     isin: "ES0138045002",
-    category: "RV Global",
+    manager: "CaixaBank Asset Management",
+    category: "Renda Variable Global",
+    ter: 1.85,
     ret1Y: 18.42,
     ret3Y: 12.15,
     ret5Y: 14.30,
+    sharpe: 0.82
   },
   {
     name: "Santander Acciones Españolas FI",
     isin: "ES0175224031",
-    category: "RV Espanya",
+    manager: "Santander Asset Management",
+    category: "Renda Variable Espanya",
+    ter: 1.70,
     ret1Y: 16.85,
     ret3Y: 11.20,
     ret5Y: 9.45,
+    sharpe: 0.74
   },
   {
     name: "BBVA Bolsa FI",
     isin: "ES0114638036",
-    category: "RV Espanya",
+    manager: "BBVA Asset Management",
+    category: "Renda Variable Espanya",
+    ter: 1.65,
     ret1Y: 15.30,
     ret3Y: 9.80,
     ret5Y: 8.90,
+    sharpe: 0.69
   },
   {
     name: "Magallanes European Equity M FI",
     isin: "ES0159259011",
-    category: "RV Europa",
+    manager: "Magallanes Value Investors",
+    category: "Renda Variable Europa",
+    ter: 1.85,
     ret1Y: 22.58,
     ret3Y: 14.10,
     ret5Y: 11.85,
+    sharpe: 0.94
   },
   {
     name: "Azvalor Internacional FI",
     isin: "ES0165144004",
-    category: "RV Global",
+    manager: "Azvalor Asset Management",
+    category: "Renda Variable Global",
+    ter: 1.80,
     ret1Y: 10.74,
     ret3Y: 18.60,
     ret5Y: 16.20,
+    sharpe: 1.05
   },
+  {
+    name: "Kutxabank Bolsa Estandar FI",
+    isin: "ES0114388038",
+    manager: "Kutxabank Gestión",
+    category: "Renda Variable Espanya",
+    ter: 1.85,
+    ret1Y: 14.90,
+    ret3Y: 9.15,
+    ret5Y: 7.80,
+    sharpe: 0.62
+  }
 ];
 
 export default function HomePage() {
+  const router = useRouter();
+  const [searchInput, setSearchInput] = useState("");
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchInput.trim()) {
+      router.push(`/funds?q=${encodeURIComponent(searchInput.trim())}`);
+    } else {
+      router.push("/funds");
+    }
+  };
+
   return (
-    <div className="bg-[#F8FAFC] flex flex-col font-sans">
+    <div className="bg-[#F8FAFC] min-h-screen flex flex-col font-sans pb-16">
 
-      {/* 1. HERO PRINCIPAL */}
+      {/* 1. TICKER DE MERCAT SUPERIOR INSTITUCIONAL */}
+      <div className="w-full bg-white border-b border-slate-200/80 overflow-x-auto scrollbar-none py-2 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-6 text-xs font-mono">
+          <div className="flex items-center gap-6 overflow-x-auto whitespace-nowrap">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              Índexs de Mercat:
+            </span>
+            {MARKET_TICKERS.map((t) => (
+              <div key={t.name} className="flex items-center gap-2">
+                <span className="text-slate-700 font-medium">{t.name}</span>
+                <span className="text-slate-900 font-bold">{t.value}</span>
+                <span className={t.isPositive ? "text-emerald-700 font-semibold" : "text-rose-600 font-semibold"}>
+                  {t.change}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="hidden lg:flex items-center gap-2 text-slate-500 text-[11px]">
+            <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+            <span>Registre Oficial CNMV & Lipper</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. CAPÇALERA PORTAL I BUSCADOR CENTRAL */}
       <section className="w-full bg-white border-b border-slate-200/80 py-10 sm:py-14">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row justify-between items-center gap-10 lg:gap-14">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           
-          {/* COLUMNA ESQUERRA: VALOR I ACCIONS */}
-          <div className="w-full lg:max-w-xl xl:max-w-2xl space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/70 text-emerald-800 text-xs font-semibold uppercase tracking-wider">
-              <span className="w-2 h-2 rounded-full bg-[#00B050] animate-pulse"></span>
-              Plataforma Fiduciària d&apos;Intel·ligència Quantitativa
+          <div className="max-w-3xl space-y-3">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 text-xs font-mono font-medium">
+              <span>Auditoria Fiduciària</span>
+              <span className="text-slate-300">•</span>
+              <span>Transparència MiFID II</span>
             </div>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-950">
+              OptiFunds Analytics
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl">
+              Plataforma professional d&apos;auditoria quantitativa de fons d&apos;inversió, anàlisi de comissions (TER), detecció de desviació indexada i construcció de carteres fiduciàries.
+            </p>
+          </div>
 
-            <div className="space-y-3">
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.08]">
-                Eines per a <br />
-                <span className="text-[#00B050]">Inversors Intel·ligents</span>
-              </h1>
-              <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed max-w-lg">
-                Audita carteres d&apos;inversió, desemmascara comissions bancàries abusives i optimitza cap a solucions indexades de baix cost amb dades oficials de la CNMV i Lipper.
-              </p>
-            </div>
+          {/* BUSCADOR INSTITUCIONAL ESTIL KOYFIN / MORNINGSTAR */}
+          <div className="max-w-2xl pt-2">
+            <form onSubmit={handleSearchSubmit} className="relative flex items-center">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Cerca un fons per nom, ISIN o gestora (ex: Santander, Magallanes, ES0114388...)"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full pl-10 pr-28 py-3 bg-slate-50 hover:bg-slate-100/60 focus:bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 rounded-xl border border-slate-200 focus:border-[#00B050] focus:ring-2 focus:ring-[#00B050]/15 focus:outline-hidden transition-all shadow-2xs"
+              />
+              <button
+                type="submit"
+                className="absolute right-1.5 px-4 py-1.5 rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-semibold transition cursor-pointer"
+              >
+                Cercar
+              </button>
+            </form>
 
-            {/* BOTONS D'ACCIONS RÀPIDES */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Link
-                href="/funds"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00B050] hover:bg-[#009945] text-white text-xs sm:text-sm font-semibold shadow-xs transition-all hover:shadow-md cursor-pointer"
+            <div className="flex items-center gap-2 pt-2 text-[11px] text-slate-500 overflow-x-auto whitespace-nowrap">
+              <span className="text-slate-400">Exemples:</span>
+              <button
+                type="button"
+                onClick={() => router.push("/funds/ES0114388038")}
+                className="hover:text-slate-900 underline underline-offset-2 decoration-slate-300 cursor-pointer"
               >
-                <BarChart3 className="w-4 h-4" />
-                <span>Explorar Screener</span>
-                <ArrowRight className="w-4 h-4 ml-0.5" />
-              </Link>
-              <Link
-                href="/closet-indexing"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs sm:text-sm font-semibold shadow-xs transition-all hover:shadow-md cursor-pointer"
+                Kutxabank Bolsa
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => router.push("/funds/ES0175224031")}
+                className="hover:text-slate-900 underline underline-offset-2 decoration-slate-300 cursor-pointer"
               >
-                <ShieldAlert className="w-4 h-4 text-emerald-400" />
-                <span>Auditar Closet Indexing</span>
-              </Link>
-              <Link
-                href="/compare"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+                Santander Acciones
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => router.push("/funds/FR0000447823")}
+                className="hover:text-slate-900 underline underline-offset-2 decoration-slate-300 cursor-pointer"
               >
-                <ArrowLeftRight className="w-4 h-4 text-slate-400" />
-                <span>Comparador 1:1</span>
-              </Link>
+                AXA Trésor (Monetari)
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => router.push("/funds/IE00B03HD191")}
+                className="hover:text-slate-900 underline underline-offset-2 decoration-slate-300 cursor-pointer"
+              >
+                Vanguard Global Stock
+              </button>
             </div>
           </div>
 
-          {/* COLUMNA DRETA: MARKET MONITOR */}
-          <div className="w-full lg:w-[540px] xl:w-[580px] shrink-0 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-              <div>
-                <h2 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                  <span>Market Monitor</span>
-                  <span className="text-slate-300">•</span>
-                  <span className="text-xs font-normal text-slate-500">Top 5 Fons Espanyols</span>
-                </h2>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Clica sobre qualsevol fons per obrir l&apos;auditoria completa
+        </div>
+      </section>
+
+      {/* 3. COBERTURA DEL SISTEMA (MÈTRIQUES INSTITUCIONALS) */}
+      <section className="w-full py-8 border-b border-slate-200/80 bg-white">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            
+            <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-1">
+              <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5 uppercase tracking-wider">
+                <Database className="w-3.5 h-3.5 text-slate-400" />
+                Data Points
+              </div>
+              <div className="text-2xl font-bold font-mono text-slate-950 tracking-tight">11.006.232</div>
+              <div className="text-[11px] text-slate-500">Sèries de NAV diari 2015–2026</div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-1">
+              <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5 uppercase tracking-wider">
+                <BarChart3 className="w-3.5 h-3.5 text-slate-400" />
+                Univers de Fons
+              </div>
+              <div className="text-2xl font-bold font-mono text-slate-950 tracking-tight">5.792</div>
+              <div className="text-[11px] text-slate-500">Vehicles auditats a Espanya</div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-1">
+              <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5 uppercase tracking-wider">
+                <Layers className="w-3.5 h-3.5 text-slate-400" />
+                Posicions en Cartera
+              </div>
+              <div className="text-2xl font-bold font-mono text-slate-950 tracking-tight">111.172</div>
+              <div className="text-[11px] text-slate-500">Accions i títols look-through</div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-1">
+              <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5 uppercase tracking-wider">
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
+                Dades Regulades
+              </div>
+              <div className="text-2xl font-bold font-mono text-slate-950 tracking-tight">100%</div>
+              <div className="text-[11px] text-slate-500">Registres oficials de la CNMV</div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* 4. SUITE D'EINES QUANTITATIVES (MÒDULS ANALÍTICS) */}
+      <section className="w-full py-10 sm:py-12">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+          
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-slate-200/80 pb-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
+                Suite d&apos;Eines
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-950 tracking-tight">
+                Mòduls d&apos;Anàlisi Quantitativa
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 max-w-md">
+              Eines estructurades per a l&apos;auditoria de costos, avaluació de risc i selecció de carteres d&apos;alta eficiència.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            
+            {/* MÒDUL 1: SCREENER */}
+            <Link
+              href="/funds"
+              className="bg-white rounded-xl p-5 border border-slate-200/80 hover:border-slate-300 hover:shadow-xs transition-all flex flex-col justify-between group"
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                    <BarChart3 className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">Catàleg Oficial</span>
+                </div>
+                <h3 className="text-sm font-bold text-slate-950 group-hover:text-emerald-800 transition-colors">
+                  Catàleg & Screener de Fons
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Exploració i filtratge d&apos;univers de fons per rendibilitat històrica (1A, 3A, 5A, 10A), ràtio de Sharpe, volatilitat anualitzada, caiguda màxima i costos oficials (TER).
                 </p>
               </div>
-              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-100 uppercase tracking-wider">
-                CNMV Oficial
-              </span>
+              <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>5.792 fons indexats</span>
+                <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-900 group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </Link>
+
+            {/* MÒDUL 2: COMPARADOR 1:1 */}
+            <Link
+              href="/compare"
+              className="bg-white rounded-xl p-5 border border-slate-200/80 hover:border-slate-300 hover:shadow-xs transition-all flex flex-col justify-between group"
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                    <ArrowLeftRight className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">Look-Through 1:1</span>
+                </div>
+                <h3 className="text-sm font-bold text-slate-950 group-hover:text-emerald-800 transition-colors">
+                  Comparador Cara a Cara
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Enfrontament de dos fons d&apos;inversió: càlcul del solapament microscòpic de títols compartits en cartera, correlació estadística i comparativa de trajectòria de preus.
+                </p>
+              </div>
+              <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Diagnòstic de Duplicitat</span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-900 group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </Link>
+
+            {/* MÒDUL 3: CLOSET INDEXING */}
+            <Link
+              href="/closet-indexing"
+              className="bg-white rounded-xl p-5 border border-slate-200/80 hover:border-slate-300 hover:shadow-xs transition-all flex flex-col justify-between group"
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">Cremers & Petajisto</span>
+                </div>
+                <h3 className="text-sm font-bold text-slate-950 group-hover:text-emerald-800 transition-colors">
+                  Auditor d&apos;Active Share (Closet Indexing)
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Avaluació de la convicció de gestió activa respecte al benchmark de mercat. Quantificació del TER efectiu aplicat sobre la fracció que realment es gestiona de manera independent.
+                </p>
+              </div>
+              <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Informe MiFID II en PDF</span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-900 group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </Link>
+
+            {/* MÒDUL 4: SMART SWITCH */}
+            <Link
+              href="/optimize"
+              className="bg-white rounded-xl p-5 border border-slate-200/80 hover:border-slate-300 hover:shadow-xs transition-all flex flex-col justify-between group"
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">Eficiència de Costos</span>
+                </div>
+                <h3 className="text-sm font-bold text-slate-950 group-hover:text-emerald-800 transition-colors">
+                  Optimitzador d&apos;Alternatives (Smart Switch)
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Localització de vehicles indexats i d&apos;alta eficiència de costos amb màxim solapament de cartera respecte al fons analitzat, per reduir despeses mantenint l&apos;exposició d&apos;actius.
+                </p>
+              </div>
+              <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Rèplica Passiva de Baix Cost</span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-900 group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </Link>
+
+            {/* MÒDUL 5: PORTFOLIO BUILDER */}
+            <Link
+              href="/portfolio"
+              className="bg-white rounded-xl p-5 border border-slate-200/80 hover:border-slate-300 hover:shadow-xs transition-all flex flex-col justify-between group"
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">Markowitz MPT</span>
+                </div>
+                <h3 className="text-sm font-bold text-slate-950 group-hover:text-emerald-800 transition-colors">
+                  Constructor i Anàlisi de Carteres
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Optimització de frontera eficient mitjançant teoria moderna de carteres, matriu de correlacions creuades, desglossament sectorial i geogràfic, i backtest històric oficial.
+                </p>
+              </div>
+              <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Assignació d&apos;Actius & MPT</span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-900 group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </Link>
+
+            {/* MÒDUL 6: SIMULADOR TER */}
+            <Link
+              href="/simulator"
+              className="bg-white rounded-xl p-5 border border-slate-200/80 hover:border-slate-300 hover:shadow-xs transition-all flex flex-col justify-between group"
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                    <Calculator className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">Capitalització Composta</span>
+                </div>
+                <h3 className="text-sm font-bold text-slate-950 group-hover:text-emerald-800 transition-colors">
+                  Simulador de Despeses i Capitalització
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Modelització matemàtica de l&apos;impacte temporal de les comissions de gestió (TER) sobre el capital net acumulat a 10, 20 i 30 anys vista.
+                </p>
+              </div>
+              <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Erosió Patrimonial per Comissions</span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-900 group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </Link>
+
+          </div>
+        </div>
+      </section>
+
+      {/* 5. MONITOR DE FONS DE MERCAT (TAULA INSTITUCIONAL) */}
+      <section className="w-full">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+            
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-slate-950 flex items-center gap-2">
+                  <span>Monitor de Fons Representatius</span>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-xs font-normal text-slate-500">Mètriques Històriques Reals CNMV</span>
+                </h2>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Fons comercials nacionals d&apos;elevat volum patrimonial
+                </p>
+              </div>
+              <Link
+                href="/funds"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-slate-950 self-start sm:self-center"
+              >
+                <span>Veure univers complet</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                    <th scope="col" className="pb-2.5 pr-2 font-medium">Vehicle</th>
-                    <th scope="col" className="pb-2.5 px-2 text-center font-medium">1 Any</th>
-                    <th scope="col" className="pb-2.5 px-2 text-center font-medium">3 Anys</th>
-                    <th scope="col" className="pb-2.5 pl-2 text-center font-medium">5 Anys</th>
+                  <tr className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200/80 bg-slate-50/60 font-mono">
+                    <th scope="col" className="py-2.5 px-4 font-medium">Vehicle & ISIN</th>
+                    <th scope="col" className="py-2.5 px-3 font-medium">Gestora</th>
+                    <th scope="col" className="py-2.5 px-3 font-medium">Categoria</th>
+                    <th scope="col" className="py-2.5 px-3 text-right font-medium">TER</th>
+                    <th scope="col" className="py-2.5 px-3 text-right font-medium">1 Any</th>
+                    <th scope="col" className="py-2.5 px-3 text-right font-medium">3 Anys</th>
+                    <th scope="col" className="py-2.5 px-3 text-right font-medium">5 Anys</th>
+                    <th scope="col" className="py-2.5 px-4 text-right font-medium">Sharpe</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {topSpanishFunds.map((fund) => (
+                  {MONITORED_FUNDS.map((f) => (
                     <tr 
-                      key={fund.isin} 
-                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                      key={f.isin} 
+                      className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
+                      onClick={() => router.push(`/funds/${f.isin}`)}
                     >
-                      <td className="py-2.5 pr-2">
-                        <Link href={`/funds/${fund.isin}`} className="block">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors truncate max-w-[200px] sm:max-w-[240px]">
-                              {fund.name}
-                            </span>
-                            <ArrowUpRight className="w-3 h-3 text-slate-300 group-hover:text-emerald-600 transition-colors shrink-0" />
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                            {fund.isin} · <span className="text-slate-500">{fund.category}</span>
-                          </div>
-                        </Link>
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-slate-900 group-hover:text-emerald-800 transition-colors flex items-center gap-1.5">
+                          <span>{f.name}</span>
+                          <ArrowUpRight className="w-3 h-3 text-slate-300 group-hover:text-emerald-700 shrink-0" />
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">{f.isin}</div>
                       </td>
-                      <td className="py-2.5 px-2 text-center align-middle">
-                        <Link href={`/funds/${fund.isin}`}>
-                          <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                            +{fund.ret1Y.toFixed(1)}%
-                          </span>
-                        </Link>
+                      <td className="py-3 px-3 text-slate-600 truncate max-w-[180px]">
+                        {f.manager}
                       </td>
-                      <td className="py-2.5 px-2 text-center align-middle">
-                        <Link href={`/funds/${fund.isin}`}>
-                          <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                            +{fund.ret3Y.toFixed(1)}%
-                          </span>
-                        </Link>
+                      <td className="py-3 px-3 text-slate-500">
+                        {f.category}
                       </td>
-                      <td className="py-2.5 pl-2 text-center align-middle">
-                        <Link href={`/funds/${fund.isin}`}>
-                          <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                            +{fund.ret5Y.toFixed(1)}%
-                          </span>
-                        </Link>
+                      <td className="py-3 px-3 text-right font-mono font-semibold text-slate-700">
+                        {f.ter.toFixed(2)}%
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-medium text-emerald-700">
+                        +{f.ret1Y.toFixed(2)}%
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-medium text-emerald-700">
+                        +{f.ret3Y.toFixed(2)}%
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-medium text-emerald-700">
+                        +{f.ret5Y.toFixed(2)}%
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono font-semibold text-slate-900">
+                        {f.sharpe.toFixed(2)}
                       </td>
                     </tr>
                   ))}
@@ -193,248 +525,15 @@ export default function HomePage() {
               </table>
             </div>
 
-            <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-              <span className="text-[11px] text-slate-400 font-mono">5.792 fons auditats</span>
-              <Link
-                href="/funds"
-                className="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:text-emerald-800 transition"
-              >
-                <span>Obrir Screener complet</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+            <div className="p-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+              <span>Univers total: 5.792 fons auditats</span>
+              <span>Dades oficials diàries de preus liquidatius CNMV</span>
             </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* 2. PILARS FIDUCIARIS & DADES OFICIALS */}
-      <section className="w-full py-12 sm:py-16 bg-white border-b border-slate-200/80">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row justify-between items-center gap-10 lg:gap-14">
-          
-          {/* GRÀFIC MÖBIUS 3D */}
-          <div className="w-full lg:max-w-xl xl:max-w-2xl relative flex items-center min-h-[300px] sm:min-h-[360px] overflow-visible">
-            <FlowingWave />
-            <div className="relative z-10 select-none space-y-2 w-full">
-              <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-950 flex items-baseline gap-1">
-                Audita<span className="text-[#00B050]">.</span>
-              </h2>
-              <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-950 flex items-baseline gap-1">
-                Compara<span className="text-[#00B050]">.</span>
-              </h2>
-              <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-950 flex items-baseline gap-1">
-                Estalvia<span className="text-[#00B050]">.</span>
-              </h2>
-            </div>
-          </div>
-
-          {/* 4 TARGETES DE MÈTRIQUES DE MERCAT */}
-          <div className="w-full lg:w-[540px] xl:w-[580px] shrink-0 space-y-6">
-            <div className="space-y-1">
-              <div className="text-xs font-mono font-semibold text-[#00B050] uppercase tracking-wider">
-                Auditoria de Mercat 360°
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">
-                Transparència sense intermediaris
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                Connectem directament amb el registre oficial de la CNMV i les carteres trimestrals de fons nacionals i internacionals.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3.5">
-              <div className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 space-y-1">
-                <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5">
-                  <Database className="w-3.5 h-3.5 text-slate-400" />
-                  Univers de Fons
-                </div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">5.792</div>
-                <div className="text-[11px] text-slate-500">Registrats a CNMV & Lipper</div>
-              </div>
-
-              <div className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 space-y-1">
-                <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-emerald-600" />
-                  Holdings Look-Through
-                </div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">111.172</div>
-                <div className="text-[11px] text-slate-500">Accions i títols desglossats</div>
-              </div>
-
-              <div className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 space-y-1">
-                <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5">
-                  <Percent className="w-3.5 h-3.5 text-[#00B050]" />
-                  Estalvi en Comissions
-                </div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">fins a 1,7%</div>
-                <div className="text-[11px] text-slate-500">Reducció mitjana de costos TER</div>
-              </div>
-
-              <div className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 space-y-1">
-                <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  Metodologia Fiduciària
-                </div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">100%</div>
-                <div className="text-[11px] text-slate-500">Cremers-Petajisto & MiFID II</div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* 3. SUITE D'EINES (BENTO GRID UNIFICAT) */}
-      <section className="w-full py-12 sm:py-16">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200/80 pb-4">
-            <div>
-              <div className="text-xs font-mono font-semibold text-[#00B050] uppercase tracking-wider mb-1">
-                Eines d&apos;Anàlisi
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
-                Suite Integral d&apos;Optimització
-              </h2>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-500 max-w-md">
-              Des de l&apos;auditoria individual d&apos;un fons comercial fins a la construcció de carteres multi-actiu completes.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            
-            {/* TARGETA 1: CLOSET INDEXING AUDITOR (FLAGSHIP) */}
-            <Link 
-              href="/closet-indexing"
-              className="lg:col-span-2 bg-slate-950 rounded-2xl p-6 sm:p-8 text-white relative overflow-hidden flex flex-col justify-between group hover:border-slate-800 border border-slate-900 transition-all shadow-sm"
-            >
-              <div className="space-y-4 max-w-xl">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider">
-                    Auditoria Insígnia
-                  </span>
-                  <span className="text-xs text-slate-400 font-mono">ACTIVE SHARE · CREMERS & PETAJISTO</span>
-                </div>
-                <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
-                  Auditor de Closet Indexing
-                </h3>
-                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                  Avalua acció per acció si un fons comercial de gestió activa es limita a copiar el seu índex de referència cobrant comissions desmesurades. Descobreix el teu Active Share real i el cost efectiu de la gestió.
-                </p>
-              </div>
-
-              <div className="pt-6 mt-6 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-4 text-slate-400 font-mono text-[11px]">
-                  <span>Solapament de Holdings</span>
-                  <span>•</span>
-                  <span>Tracking Error</span>
-                  <span>•</span>
-                  <span>Informe PDF MiFID II</span>
-                </div>
-                <div className="inline-flex items-center gap-1 font-semibold text-emerald-400 group-hover:translate-x-1 transition-transform">
-                  <span>Auditar ara</span>
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </div>
-            </Link>
-
-            {/* TARGETA 2: SMART SWITCH */}
-            <Link
-              href="/optimize"
-              className="bg-white rounded-2xl p-6 border border-slate-200/90 hover:border-emerald-300 flex flex-col justify-between group transition-all shadow-2xs hover:shadow-md cursor-pointer"
-            >
-              <div className="space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#00B050]">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-950 group-hover:text-emerald-700 transition-colors">
-                  Smart Switch
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Troba alternatives indexades homologades de baix cost per a qualsevol fons comercial tradicional, preservant l&apos;exposició sectorial i retallant fins a un 80% les comissions.
-                </p>
-              </div>
-
-              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
-                <span>Optimitzador TER</span>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#00B050] group-hover:translate-x-1 transition-all" />
-              </div>
-            </Link>
-
-            {/* TARGETA 3: COMPARADOR CARA A CARA */}
-            <Link
-              href="/compare"
-              className="bg-white rounded-2xl p-6 border border-slate-200/90 hover:border-emerald-300 flex flex-col justify-between group transition-all shadow-2xs hover:shadow-md cursor-pointer"
-            >
-              <div className="space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
-                  <ArrowLeftRight className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-950 group-hover:text-emerald-700 transition-colors">
-                  Comparador Cara a Cara
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Enfronta dos vehicles 1:1: compara la sèrie històrica diària oficial, calcula el solapament microscòpic de títols compartits i avalua si són duplicats o diversificadors reals.
-                </p>
-              </div>
-
-              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
-                <span>Diagnòstic 1:1</span>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#00B050] group-hover:translate-x-1 transition-all" />
-              </div>
-            </Link>
-
-            {/* TARGETA 4: PORTFOLIO BUILDER */}
-            <Link
-              href="/portfolio"
-              className="bg-white rounded-2xl p-6 border border-slate-200/90 hover:border-emerald-300 flex flex-col justify-between group transition-all shadow-2xs hover:shadow-md cursor-pointer"
-            >
-              <div className="space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
-                  <Layers className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-950 group-hover:text-emerald-700 transition-colors">
-                  Portfolio Builder
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Assignació multi-actiu d&apos;alta precisió. Construeix la teva cartera personalitzada amb optimització MPT Markowitz, look-through geogràfic i sectorial, i backtest històric real.
-                </p>
-              </div>
-
-              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
-                <span>Markowitz & Look-Through</span>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#00B050] group-hover:translate-x-1 transition-all" />
-              </div>
-            </Link>
-
-            {/* TARGETA 5: SIMULADOR DE TER */}
-            <Link
-              href="/simulator"
-              className="bg-white rounded-2xl p-6 border border-slate-200/90 hover:border-emerald-300 flex flex-col justify-between group transition-all shadow-2xs hover:shadow-md cursor-pointer"
-            >
-              <div className="space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-                  <Calculator className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-950 group-hover:text-emerald-700 transition-colors">
-                  Simulador de TER
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Modela l&apos;impacte de l&apos;interès compost i l&apos;erosió patrimonial causada per les comissions de gestió a 10, 20 i 30 anys vista. Entén quants milers d&apos;euros es perden en costos.
-                </p>
-              </div>
-
-              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
-                <span>Model de Capitalització</span>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#00B050] group-hover:translate-x-1 transition-all" />
-              </div>
-            </Link>
 
           </div>
         </div>
       </section>
-      
+
     </div>
   );
 }

@@ -708,7 +708,7 @@ def compare_funds_pairwise_history(
 
     if is_closet:
         v_type = "closet_indexing"
-        v_badge = "⚠️ Clon Bancari Car (Closet Indexing)"
+        v_badge = "Clon Indexat de Cost Elevat (Closet Indexing)"
         v_title = f"{m1['name']} replica la dinàmica de {m2['name']} amb comissions desproporcionades"
         v_summary = (
             f"Amb una correlació històrica del {corr * 100:.1f}% i una Beta de {beta1:.2f}, el Fons A "
@@ -727,7 +727,7 @@ def compare_funds_pairwise_history(
         ]
     elif corr >= 0.80 and cagr_diff > 1.0:
         v_type = "fee_inefficiency"
-        v_badge = "📉 Ineficiència per Costos de Gestió"
+        v_badge = "Ineficiència per Costos de Gestió (TER)"
         v_title = f"{m2['name']} supera a {m1['name']} per major eficiència de costos"
         v_summary = (
             f"Ambdós fons operen en el mateix segment de mercat (correlació {corr * 100:.1f}%), però {m2['name']} "
@@ -741,7 +741,7 @@ def compare_funds_pairwise_history(
         ]
     elif corr < 0.70:
         v_type = "diversification"
-        v_badge = "🛡️ Vehicles Complementaris / Descorrelacionats"
+        v_badge = "Vehicles Complementaris / Baixa Correlació"
         v_title = "Ambdós vehicles aporten fonts de rendibilitat i risc independents"
         v_summary = (
             f"La baixa correlació ({corr * 100:.1f}%) i un Tracking Error del {tracking_error:.2f}% demostren que "
@@ -755,7 +755,7 @@ def compare_funds_pairwise_history(
         ]
     elif cagr1 > cagr2 + 0.8:
         v_type = "true_active"
-        v_badge = "💎 Gestió Activa de Convicció"
+        v_badge = "Gestió Activa Independent (Alpha Positiu)"
         v_title = f"{m1['name']} genera valor afegit i Alpha positiu respecte a {m2['name']}"
         v_summary = (
             f"El fons actiu aconsegueix superar al vehicle comparat (+{cagr1 - cagr2:.2f}% CAGR), generant un "
@@ -769,7 +769,7 @@ def compare_funds_pairwise_history(
         ]
     else:
         v_type = "balanced"
-        v_badge = "⚖️ Comportament Paritari"
+        v_badge = "Comportament Paritari / Risc Homòleg"
         v_title = "Rendiments i perfils de risc equilibrats entre ambdós fons"
         v_summary = (
             f"Ambdós vehicles presenten una trajectòria similar en l'horitzó analitzat. La diferència de CAGR "

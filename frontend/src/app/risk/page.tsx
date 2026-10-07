@@ -108,16 +108,16 @@ export default function RiskReturnPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
           <div className="space-y-2 max-w-2xl">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/70 uppercase tracking-wider">
-                Univers de Risc & Rendibilitat // UCITS
+              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wider">
+                Anàlisi Risc-Rendibilitat (Markowitz)
               </span>
-              <span className="text-xs text-slate-400 font-mono">SHARPE GRADIENT</span>
+              <span className="text-xs text-slate-400 font-mono">DISPERSIÓ DE MERCAT · SHARPE</span>
             </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-950 tracking-tight leading-snug">
-              Frontera de Risc: <span className="text-[#00B050]">Rendibilitat vs Volatilitat</span>
+              Frontera de Risc: Rendibilitat vs Volatilitat
             </h1>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Gràfic de dispersió quantitativa de mercat: visualitza quins fons compensen el risc assumit amb ràtios de Sharpe superiors i quins cobren comissions excessives.
+              Dispersió quantitativa de l&apos;univers de fons: avaluació de l&apos;eficiència de la cartera mesurada pel ràtio de Sharpe respecte al nivell de risc assumit.
             </p>
           </div>
 

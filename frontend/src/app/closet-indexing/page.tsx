@@ -122,16 +122,16 @@ function ClosetIndexingContent() {
         {/* TITULAR EDITORIAL */}
         <div className="space-y-2 border-b border-slate-200/80 pb-6">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/70">
+            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wider">
               Metodologia Cremers & Petajisto
             </span>
-            <span className="text-xs text-slate-400 font-mono">UCITS COMPLIANT</span>
+            <span className="text-xs text-slate-400 font-mono">ACTIVE SHARE · MÈTRIQUES DE CONVICCIÓ</span>
           </div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-950 tracking-tight leading-snug">
-            Auditor de <span className="text-[#00B050]">Closet Indexing</span> & Active Share
+            Auditoria d&apos;Active Share i Desviació Indexada
           </h1>
           <p className="text-sm text-slate-600 max-w-2xl leading-relaxed">
-            Desemmascara si un vehicle de gestió activa es limita a replicar l'índex i quantifica el TER efectiu que pagues pel risc autèntic.
+            Avaluació quantitativa de la convicció de gestió activa respecte al benchmark de mercat. Quantificació del cost efectiu (TER) sobre la fracció de cartera que realment es gestiona de manera independent.
           </p>
         </div>
 
@@ -221,13 +221,13 @@ function ClosetIndexingContent() {
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold tracking-tight">
                     {audit.is_closet_indexer
-                      ? "Alerta de Closet Indexing Confirmada"
-                      : "Gestió Activa Autèntica Verificada"}
+                      ? "Desviació Indexada Elevada (Closet Indexing Detectat)"
+                      : "Gestió Activa Independent (Active Share Elevat)"}
                   </h3>
                   <p className="text-xs leading-relaxed opacity-90 max-w-3xl">
                     {audit.is_closet_indexer
-                      ? `Aquest vehicle comparteix un ${audit.overlap_pct}% de la seva composició amb l'índex ${audit.bmk_name}. Estàs assumint un sobrecost ocult: el TER efectiu aplicat sobre la fracció que realment es gestiona és del ${audit.active_ter}%.`
-                      : `El fons presenta una elevada diferenciació (Active Share del ${audit.active_share_pct}%), oferint convicció independent que justifica la comissió de gestió d'autor.`}
+                      ? `Aquest vehicle comparteix un ${audit.overlap_pct}% de la seva composició amb l'índex ${audit.bmk_name}. El cost efectiu calculat (Active TER) sobre la fracció de gestió autònoma és del ${audit.active_ter}%.`
+                      : `El fons presenta una elevada diferenciació (Active Share del ${audit.active_share_pct}%), mostrant convicció independent amb potencial per generar Alpha respecte al benchmark.`}
                   </p>
                 </div>
               </div>

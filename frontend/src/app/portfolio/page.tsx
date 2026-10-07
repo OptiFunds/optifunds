@@ -780,16 +780,16 @@ function PortfolioContent() {
         {/* TITULAR EDITORIAL */}
         <div className="space-y-2 border-b border-slate-200/80 pb-6">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/70 uppercase tracking-wider">
-              Modern Portfolio Theory // MPT 360°
+            <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wider">
+              Teoria Moderna de Carteres (Markowitz)
             </span>
-            <span className="text-xs text-slate-400 font-mono">GLOBAL LOOK-THROUGH & ALLOCATION</span>
+            <span className="text-xs text-slate-400 font-mono">DESGLOSSAMENT D&apos;ACTIUS & BACKTEST</span>
           </div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-950 tracking-tight leading-snug">
-            Portfolio Builder: <span className="text-[#00B050]">Eficiència & Distribució Mundial</span>
+            Constructor i Anàlisi de Carteres
           </h1>
           <p className="text-sm text-slate-600 max-w-2xl leading-relaxed">
-            Analítica matricial de Markowitz, radiografia d&apos;accions subjacents i exposició macroeconòmica agregada per a inversors conscients dels costos.
+            Optimització de frontera eficient (MPT), matriu de correlacions, desglossament sectorial i geogràfic look-through, i simulació de backtest històric real amb dades oficials.
           </p>
         </div>
 
